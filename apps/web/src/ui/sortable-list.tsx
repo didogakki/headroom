@@ -65,7 +65,7 @@ export function SortableList(props: {
     if (byKey) refocus.current = id;
     onMove(id, to);
     const label = items.find((item) => item.id === id)?.label ?? id;
-    setMessage(`${label} moved to position ${to + 1} of ${items.length}.`);
+    setMessage(`${label}已移到第 ${to + 1} 位，共 ${items.length} 项。`);
   };
 
   const onKeyDown = (index: number, event: KeyboardEvent<HTMLButtonElement>): void => {
@@ -148,7 +148,7 @@ export function SortableList(props: {
         document.documentElement.classList.add("is-reordering");
         list.current?.classList.add("sorting");
         state.rows[state.from]?.classList.add("dragging");
-        setMessage(`Picked up ${label}. Position ${index + 1} of ${items.length}.`);
+        setMessage(`已拿起${label}。当前第 ${index + 1} 位，共 ${items.length} 项。`);
       }
       const shift = clampShift(state.slots, state.from, travelled);
       state.to = targetIndex(state.slots, state.from, shift);
@@ -184,7 +184,7 @@ export function SortableList(props: {
               type="button"
               className="sort-grip"
               data-grip={item.id}
-              aria-label={`Reorder ${item.label}`}
+              aria-label={`调整${item.label}的顺序`}
               disabled={items.length < 2}
               onPointerDown={(event) => onPointerDown(index, event)}
               onKeyDown={(event) => onKeyDown(index, event)}

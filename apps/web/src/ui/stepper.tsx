@@ -13,7 +13,7 @@ export function Stepper(props: {
   readonly state: StepState;
 }) {
   return (
-    <ol className="stepper" aria-label="Progress">
+    <ol className="stepper" aria-label="进度">
       {props.words.map((word, index) => {
         const number = index + 1;
         const look = number < props.step ? "done" : number === props.step ? props.state : undefined;

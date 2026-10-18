@@ -1,4 +1,5 @@
 import { displayMeter, type Tone } from "@headroom/view-model/tone";
+import { zhLabel } from "../../lib/zh.ts";
 import { cx } from "../../ui/cx.ts";
 import type { PopoverContent } from "../../ui/hover-popover.tsx";
 import type { Lane } from "./lanes.ts";
@@ -78,7 +79,7 @@ export function LaneBars(props: {
           tips={tips}
           variant="prev"
           box={box}
-          text={`Ended ${shortDay(lane.start)}`}
+          text={`已结束 ${shortDay(lane.start)}`}
         />,
       );
     }
@@ -95,7 +96,7 @@ export function LaneBars(props: {
           tips={tips}
           variant="idle"
           box={current}
-          text="Not Started"
+          text="未开始"
         />,
       );
     } else if (lane.phase === "ended") {
@@ -106,7 +107,7 @@ export function LaneBars(props: {
           tips={tips}
           variant="prev"
           box={current}
-          text={`Ended ${resetShort(kind, lane.end, clock)}`}
+          text={`已结束 ${resetShort(kind, lane.end, clock)}`}
         />,
       );
     } else {
@@ -121,7 +122,7 @@ export function LaneBars(props: {
           tone={shown?.tone ?? null}
           elapsed={elapsedShare(current, now)}
           strip={shown?.fill ?? null}
-          text={`${usedText(lane.used, context).replace("Not reported", "Not Reported")} · ${resetShort(kind, lane.end, clock)}`}
+          text={`${usedText(lane.used, context)} · ${resetShort(kind, lane.end, clock)}`}
         />,
       );
     }
@@ -138,9 +139,7 @@ export function LaneBars(props: {
           variant="next"
           box={box}
           text={
-            kind === "session"
-              ? "Starts On Next Use"
-              : `Next · ${shortDay(lane.end + lane.lengthMs)}`
+            kind === "session" ? "下次使用时开始" : `下一个 · ${shortDay(lane.end + lane.lengthMs)}`
           }
         />,
       );
@@ -159,7 +158,7 @@ export function LaneBars(props: {
         className="tl-tick"
         style={{ left: `${x}%` }}
         data-tip={id}
-        aria-label={tip === undefined ? `${bank.label} expires` : tipLabel(tip)}
+        aria-label={tip === undefined ? `${zhLabel(bank.label)}到期` : tipLabel(tip)}
       >
         <i />
       </button>,
@@ -178,7 +177,7 @@ export function LaneBars(props: {
         // Kept a dot's width inside the lane, so a reset at the window's start is not cut off at the edge.
         style={{ left: `clamp(6px, ${x}%, calc(100% - 6px))` }}
         data-tip={id}
-        aria-label={tip === undefined ? "Reset early" : tipLabel(tip)}
+        aria-label={tip === undefined ? "提前重置" : tipLabel(tip)}
       >
         <i />
       </button>,

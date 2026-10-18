@@ -45,11 +45,11 @@ export function unavailableNote(
 ): string {
   const need =
     entry.reason === "cli_not_installed"
-      ? `Needs the ${provider} CLI on the server.`
-      : "Not available on this server.";
-  if (alternatives.includes("import")) return `${need} Install it, or use Import.`;
-  if (alternatives.length > 0) return `${need} Install it, or use another method.`;
-  return `${need} Install it, then try again.`;
+      ? `服务器上需要安装 ${provider} CLI。`
+      : "此服务器上不可用。";
+  if (alternatives.includes("import")) return `${need}请安装它，或使用“导入文件”。`;
+  if (alternatives.length > 0) return `${need}请安装它，或使用其他方式。`;
+  return `${need}请安装它，然后重试。`;
 }
 
 export type Accepts = "url" | "code" | "url_or_code";
@@ -62,9 +62,9 @@ export function pasteInputKind(accepts: Accepts, value: string): "redirect" | "c
 }
 
 const acceptsLabels: Record<Accepts, string> = {
-  url: "Address You Landed On",
-  code: "Code Shown",
-  url_or_code: "Address or Code",
+  url: "你到达的地址",
+  code: "显示的代码",
+  url_or_code: "地址或代码",
 };
 
 export function acceptsLabel(accepts: Accepts): string {
@@ -73,8 +73,8 @@ export function acceptsLabel(accepts: Accepts): string {
 
 const acceptsPlaceholders: Record<Accepts, string> = {
   url: "http://localhost:…/callback?code=…",
-  code: "Paste the code",
-  url_or_code: "Paste the address or the code",
+  code: "粘贴代码",
+  url_or_code: "粘贴地址或代码",
 };
 
 export function acceptsPlaceholder(accepts: Accepts): string {
@@ -88,26 +88,24 @@ export function clockLeft(expiresAt: number, now: number): string {
 }
 
 const stoppedReasons = {
-  expired: "The approval expired. Nothing was saved.",
-  cancelled: "The sign-in was cancelled. Nothing was saved.",
-  failed: "The provider rejected the sign-in. Nothing was saved. Check the account and try again.",
+  expired: "批准已过期。未保存任何内容。",
+  cancelled: "登录已取消。未保存任何内容。",
+  failed: "服务商拒绝了此次登录。未保存任何内容。请检查账户后重试。",
 } as const;
 
 /** Plain words for each category of failure the server reports as "category: detail". */
 const categoryReasons: Record<string, string> = {
   approval_expired: stoppedReasons.expired,
-  approval_denied: "The sign-in was declined. Nothing was saved.",
+  approval_denied: "登录被拒绝。未保存任何内容。",
   authentication_required: stoppedReasons.failed,
-  permission_denied: "This account cannot share its limits. Nothing was saved.",
-  rate_limited: "The provider asked to slow down. Nothing was saved. Try again in a minute.",
-  provider_unavailable: "The provider did not answer. Nothing was saved. Try again in a minute.",
-  identity_mismatch:
-    "This is a different account than the one being reconnected. Nothing was saved.",
-  invalid_response:
-    "The provider's reply was unreadable. Nothing was saved. Check what you pasted.",
-  unsupported_metric: "The provider reports no limits for this account. Nothing was saved.",
-  selection_required: "Choose an account first. Nothing was saved.",
-  internal_error: "Something went wrong checking the sign-in. Nothing was saved.",
+  permission_denied: "此账户不能共享它的额度。未保存任何内容。",
+  rate_limited: "服务商要求放慢速度。未保存任何内容。请一分钟后重试。",
+  provider_unavailable: "服务商没有响应。未保存任何内容。请一分钟后重试。",
+  identity_mismatch: "这与要重新连接的账户不是同一个账户。未保存任何内容。",
+  invalid_response: "服务商的回复无法读取。未保存任何内容。请检查你粘贴的内容。",
+  unsupported_metric: "服务商没有报告此账户的额度。未保存任何内容。",
+  selection_required: "请先选择一个账户。未保存任何内容。",
+  internal_error: "检查登录时出了问题。未保存任何内容。",
 };
 
 /** Plain words for why an attempt did not finish. Never shows the raw category or provider text. */

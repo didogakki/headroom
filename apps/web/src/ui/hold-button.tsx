@@ -29,7 +29,7 @@ export type HoldOutcome = "ok" | "failed" | "unknown";
  * already took; it re-arms only when `settleKey` changes, meaning fresh account data has arrived.
  */
 export function HoldButton(props: {
-  /** Idle label, for example "Hold to Reset Limits". */
+  /** Idle label, for example "长按重置额度". */
   readonly label: string;
   readonly onConfirm: () => Promise<HoldOutcome>;
   readonly requestingLabel?: string;
@@ -50,16 +50,16 @@ export function HoldButton(props: {
   const {
     label,
     onConfirm,
-    requestingLabel = "Resetting",
-    okLabel = "Limits Reset",
-    failedLabel = "Reset Failed · Hold to Try Again",
-    unknownLabel = "Reset Status Unknown · Refresh to Check",
+    requestingLabel = "正在重置",
+    okLabel = "额度已重置",
+    failedLabel = "重置失败 · 长按重试",
+    unknownLabel = "重置状态未知 · 刷新后查看",
     settleKey,
     icon = <ResetIcon />,
     size = "md",
     disabled = false,
     off = false,
-    offTitle = "Account actions are switched off in Settings.",
+    offTitle = "账户操作已在设置中关闭。",
     preview,
   } = props;
   const hintId = useId();
@@ -180,7 +180,7 @@ export function HoldButton(props: {
         </span>
       </button>
       <span id={hintId} className="sr">
-        Press and hold for 1.2 seconds to confirm. With a keyboard, hold Space or Enter.
+        长按 1.2 秒以确认。使用键盘时，请按住空格键或回车键。
       </span>
     </>
   );

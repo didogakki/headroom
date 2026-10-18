@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { AlertIcon, PauseIcon } from "../../icons.tsx";
 import { formatNumber } from "@headroom/view-model/present";
 import { When } from "../../lib/when.tsx";
+import { zhAccountName, zhCaption, zhLabel, zhWindow, zhWindowName } from "../../lib/zh.ts";
 import { Bar } from "../../ui/bar.tsx";
 import { cx } from "../../ui/cx.ts";
 import { VerifiedSeal } from "../../ui/verified-seal.tsx";
@@ -52,7 +53,7 @@ function Mini(props: {
           {limiting ? (
             <LimitTag />
           ) : figure.caption === null ? null : (
-            <span className="cmp-tag">{figure.caption}</span>
+            <span className="cmp-tag">{zhCaption(figure.caption)}</span>
           )}
         </div>
         <Bar
@@ -60,14 +61,14 @@ function Mini(props: {
           percent={figure.fill}
           tone={figure.tone}
           valueNow={figure.used}
-          label={`${name} ${figure.used}% used`}
+          label={`${name} 已用 ${figure.used}%`}
         />
         <div className="cap">{props.caption}</div>
       </div>
     );
   }
   const words =
-    figure.kind === "not_started" ? "Not Started" : figure.kind === "unlimited" ? "Unlimited" : "—";
+    figure.kind === "not_started" ? "未开始" : figure.kind === "unlimited" ? "无限制" : "—";
   return (
     <div className={cx("cmp-mc", "none", props.large === true && "lg")}>
       <div className="top-line">
@@ -83,10 +84,13 @@ function Mini(props: {
 function WindowCell(props: { readonly row: Row; readonly column: Column; readonly look: Look }) {
   const { row, column, look } = props;
   const provider = row.connection.provider;
-  const name = column.window === null ? column.label : `${column.label} ${column.window}`;
+  const name =
+    column.window === null
+      ? zhLabel(column.label)
+      : `${zhLabel(column.label)} ${zhWindow(column.window)}`;
   if (column.key === balanceKey) {
     if (row.balance === null) {
-      return <Mini figure={{ kind: "unknown" }} name={name} caption="Not reported" />;
+      return <Mini figure={{ kind: "unknown" }} name={name} caption="未报告" />;
     }
     const { value, total, decimals } = row.balance;
     if (total === null || row.room.left === null) {
@@ -95,7 +99,7 @@ function WindowCell(props: { readonly row: Row; readonly column: Column; readonl
           <div className="top-line">
             <b>{formatNumber(value, decimals)}</b>
           </div>
-          <div className="cap">credits left</div>
+          <div className="cap">积分剩余</div>
         </div>
       );
     }
@@ -103,7 +107,7 @@ function WindowCell(props: { readonly row: Row; readonly column: Column; readonl
       <Mini
         figure={figureOfRoom(row.room.left, provider, look)}
         name={name}
-        caption={`${formatNumber(value, decimals)} of ${formatNumber(total, decimals)} left`}
+        caption={`剩余 ${formatNumber(value, decimals)}，共 ${formatNumber(total, decimals)}`}
       />
     );
   }
@@ -114,7 +118,7 @@ function WindowCell(props: { readonly row: Row; readonly column: Column; readonl
         <div className="top-line">
           <b className="muted">—</b>
         </div>
-        <div className="cap">Not reported</div>
+        <div className="cap">未报告</div>
       </div>
     );
   }
@@ -132,10 +136,10 @@ function RoomCell(props: { readonly row: Row; readonly look: Look }) {
   const { row, look } = props;
   const { room } = row;
   if (row.inactive) {
-    return <Mini figure={{ kind: "unknown" }} name="Room left" caption="Not counted" large />;
+    return <Mini figure={{ kind: "unknown" }} name="剩余额度" caption="不计入" large />;
   }
   if (room.left === null) {
-    return <Mini figure={{ kind: "unknown" }} name="Room left" caption="Not reported" large />;
+    return <Mini figure={{ kind: "unknown" }} name="剩余额度" caption="未报告" large />;
   }
   if (room.unit === "credits") {
     return (
@@ -143,7 +147,7 @@ function RoomCell(props: { readonly row: Row; readonly look: Look }) {
         <div className="top-line">
           <b>{formatNumber(room.left, 2)}</b>
         </div>
-        <div className="cap">credits left</div>
+        <div className="cap">积分剩余</div>
       </div>
     );
   }
@@ -152,13 +156,13 @@ function RoomCell(props: { readonly row: Row; readonly look: Look }) {
   return (
     <Mini
       figure={figureOfRoom(room.left, row.connection.provider, look)}
-      name="Room left"
+      name="剩余额度"
       caption={
         unstarted
-          ? "Nothing running yet"
+          ? "尚未开始计时"
           : limited === null
-            ? "Share of everything granted"
-            : `Limited by ${limited}`
+            ? "占全部授予额度的比例"
+            : `受限于${zhWindowName(limited)}`
       }
       large
     />
@@ -173,7 +177,7 @@ function AccountCell(props: { readonly row: Row; readonly recommended: boolean }
     <div className="cmp-acct">
       <div className="line">
         <span className="name">
-          {row.name}
+          {zhAccountName(row.connection)}
           {row.plan === null ? null : (
             <span className="plan">
               <span className="sep" aria-hidden="true">
@@ -183,17 +187,17 @@ function AccountCell(props: { readonly row: Row; readonly recommended: boolean }
             </span>
           )}
         </span>
-        {props.recommended ? <VerifiedSeal size="sm" label="Recommended right now" /> : null}
+        {props.recommended ? <VerifiedSeal size="sm" label="当前推荐" /> : null}
       </div>
       {row.inactive ? (
         <>
           <span className="why">
             {paused ? <PauseIcon /> : <AlertIcon />}
-            {paused ? "Paused. Not counted." : "Disconnected. Not counted."}
+            {paused ? "已暂停，不计入。" : "已断开，不计入。"}
           </span>
           {at === null ? null : (
             <span className="sub">
-              <When at={at} kind="ago" prefix="Updated" />
+              <When at={at} kind="ago" suffix="更新" />
             </span>
           )}
         </>
@@ -250,15 +254,17 @@ export function Matrix(props: {
           <thead>
             <tr>
               <Header sortKey="name" sort={sort} onSort={onSort}>
-                <b>Account</b>
+                <b>账户</b>
               </Header>
               <Header sortKey="room" sort={sort} onSort={onSort}>
-                <b>Room Left</b>
+                <b>剩余额度</b>
               </Header>
               {props.columns.map((column) => (
                 <Header key={column.key} sortKey={column.key} sort={sort} onSort={onSort}>
-                  <b>{column.label}</b>
-                  {column.window === null ? null : <span className="window">{column.window}</span>}
+                  <b>{zhLabel(column.label)}</b>
+                  {column.window === null ? null : (
+                    <span className="window">{zhWindow(column.window)}</span>
+                  )}
                 </Header>
               ))}
             </tr>

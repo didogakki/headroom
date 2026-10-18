@@ -1,12 +1,12 @@
 import { Children, isValidElement, type ReactNode } from "react";
 
 import { BrandMark, ChevronDownIcon } from "../../icons.tsx";
-import { accountName, providerName } from "@headroom/view-model/labels";
+import { providerName } from "@headroom/view-model/labels";
 import type { OverviewConnection } from "@headroom/view-model/overview";
-import { dayLabel, monthLong } from "@headroom/view-model/wallet-dates";
 import { formatMoney } from "@headroom/view-model/wallet-money";
 import type { WalletSummary, WalletTopUp } from "@headroom/view-model/wallet";
 
+import { zhAccountName, zhDay, zhLabel, zhMonthLabel } from "../../lib/zh.ts";
 import { Pill } from "../../ui/pill.tsx";
 import { Popover } from "../../ui/menu.tsx";
 import { figureText, originalNote } from "./amount.ts";
@@ -65,8 +65,9 @@ function Stat(props: {
   );
 }
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
+/** "3 笔充值": Chinese counts take one word, whatever the number. */
+function counted(count: number, noun: string): string {
+  return `${count} ${noun}`;
 }
 
 /** One top-up: provider and account, date and credits, then the amount with what was billed beneath it. */
@@ -75,21 +76,21 @@ function TopUpRow(props: {
   readonly connection: OverviewConnection | undefined;
 }) {
   const { topUp, connection } = props;
-  const note = topUp.amount === null ? null : originalNote(topUp.amount, " billed");
+  const note = topUp.amount === null ? null : originalNote(topUp.amount, " 计费");
   const detail = [
-    dayLabel(topUp.date),
-    topUp.credits === null ? null : `${topUp.credits.toLocaleString("en-US")} credits`,
+    zhDay(topUp.date),
+    topUp.credits === null ? null : `${topUp.credits.toLocaleString("en-US")} 积分`,
   ]
     .filter((part) => part !== null)
     .join(" · ");
-  const who = connection === undefined ? null : accountName(connection);
+  const who = connection === undefined ? null : zhAccountName(connection);
   return (
     <li>
       {connection === undefined ? <span /> : <BrandMark provider={connection.provider} />}
       <span className="w-pop-text">
         <span className="w-pop-name">
           {connection === undefined ? (
-            "Removed account"
+            "已删除的账户"
           ) : (
             <>
               {providerName(connection.provider)}
@@ -106,9 +107,9 @@ function TopUpRow(props: {
       </span>
       <span className="w-pop-amount num">
         {topUp.kind === "free" ? (
-          <Pill tone="quiet">Free</Pill>
+          <Pill tone="quiet">免费</Pill>
         ) : topUp.amount === null ? (
-          <span className="w-pop-sub">Price not set</span>
+          <span className="w-pop-sub">未设置价格</span>
         ) : (
           <span className="w-pop-name">{figureText(topUp.amount)}</span>
         )}
@@ -127,8 +128,8 @@ function TopUpsPopover(props: {
   const { items, paid, paidCount, unpriced } = props.summary.topUpsThisMonth;
   return (
     <Popover
-      label={`Top-ups this month: ${props.caption}`}
-      panelLabel="Top-ups this month"
+      label={`本月充值：${props.caption}`}
+      panelLabel="本月充值"
       panelClassName="notif w-topups-pop"
       triggerClassName="w-cap-trigger"
       // The caption sits at the left of its column, so the panel opens rightward and never covers the next stat.
@@ -142,8 +143,8 @@ function TopUpsPopover(props: {
       openOnHover
     >
       <p className="w-pop-head">
-        <span>{monthLong(props.summary.today.slice(0, 7))}</span>
-        <span>{plural(items.length, "top-up", "top-ups")}</span>
+        <span>{zhMonthLabel(props.summary.today.slice(0, 7))}</span>
+        <span>{counted(items.length, "笔充值")}</span>
       </p>
       <ul className="w-pop-list">
         {items.map((topUp) => (
@@ -156,22 +157,19 @@ function TopUpsPopover(props: {
       </ul>
       <p className="w-pop-total">
         {paidCount === 0 ? (
-          <span>No paid top-ups</span>
+          <span>没有付费充值</span>
         ) : (
           <>
-            <span>Total paid</span>
+            <span>已付合计</span>
             <span className="num">{formatMoney(paid.money)}</span>
           </>
         )}
       </p>
       {paid.missing === 0 ? null : (
-        <p className="w-pop-note">{plural(paid.missing, "amount has", "amounts have")} no rate.</p>
+        <p className="w-pop-note">{counted(paid.missing, "笔金额")}没有汇率。</p>
       )}
       {unpriced === 0 ? null : (
-        <p className="w-pop-note">
-          {plural(unpriced, "top-up has", "top-ups have")} no price yet and{" "}
-          {unpriced === 1 ? "is" : "are"} left out of the total.
-        </p>
+        <p className="w-pop-note">{counted(unpriced, "笔充值")}还没有价格，已从合计中排除。</p>
       )}
     </Popover>
   );
@@ -191,8 +189,8 @@ function UsageSpendPopover(props: { readonly summary: WalletSummary; readonly ca
   const { usageSpend } = props.summary;
   return (
     <Popover
-      label={`Usage spend: ${props.caption}`}
-      panelLabel="Usage spend by account"
+      label={`用量支出：${props.caption}`}
+      panelLabel="按账户划分的用量支出"
       panelClassName="notif w-topups-pop"
       triggerClassName="w-cap-trigger"
       align="start"
@@ -205,12 +203,12 @@ function UsageSpendPopover(props: { readonly summary: WalletSummary; readonly ca
       openOnHover
     >
       <p className="w-pop-head">
-        <span>Reported by the provider</span>
-        <span>{plural(accounts.length, "account", "accounts")}</span>
+        <span>由服务商报告</span>
+        <span>{counted(accounts.length, "个账户")}</span>
       </p>
       <ul className="w-pop-list">
         {accounts.map(({ connection, spend }) => {
-          const who = accountName(connection);
+          const who = zhAccountName(connection);
           const note = originalNote(spend, "");
           return (
             <li key={connection.id}>
@@ -221,7 +219,7 @@ function UsageSpendPopover(props: { readonly summary: WalletSummary; readonly ca
                   {" · "}
                   <span className={who.includes("@") ? "who" : undefined}>{who}</span>
                 </span>
-                <span className="w-pop-sub">{spend.label}</span>
+                <span className="w-pop-sub">{zhLabel(spend.label)}</span>
               </span>
               <span className="w-pop-amount num">
                 <span className="w-pop-name">{figureText(spend)}</span>
@@ -232,13 +230,11 @@ function UsageSpendPopover(props: { readonly summary: WalletSummary; readonly ca
         })}
       </ul>
       <p className="w-pop-total">
-        <span>Total</span>
+        <span>合计</span>
         <span className="num">{formatMoney(usageSpend.money)}</span>
       </p>
       {usageSpend.missing === 0 ? null : (
-        <p className="w-pop-note">
-          {plural(usageSpend.missing, "amount has", "amounts have")} no rate.
-        </p>
+        <p className="w-pop-note">{counted(usageSpend.missing, "笔金额")}没有汇率。</p>
       )}
     </Popover>
   );
@@ -255,13 +251,13 @@ function SubscriptionsPopover(props: {
     .filter((account) => account.cost?.kind === "paid");
   const { free, included } = summary.counts;
   const left = [
-    free > 0 ? `${free} free` : null,
-    included > 0 ? `${included} included` : null,
+    free > 0 ? `${free} 个免费` : null,
+    included > 0 ? `${included} 个包含在其他订阅中` : null,
   ].filter((part) => part !== null);
   return (
     <Popover
-      label={`Subscriptions: ${props.caption}`}
-      panelLabel="Paid subscriptions by account"
+      label={`订阅：${props.caption}`}
+      panelLabel="按账户划分的付费订阅"
       panelClassName="notif w-topups-pop"
       triggerClassName="w-cap-trigger"
       align="start"
@@ -274,19 +270,19 @@ function SubscriptionsPopover(props: {
       openOnHover
     >
       <p className="w-pop-head">
-        <span>Per month</span>
-        <span>{plural(paid.length, "paid account", "paid accounts")}</span>
+        <span>每月</span>
+        <span>{counted(paid.length, "个付费账户")}</span>
       </p>
       <ul className="w-pop-list">
         {paid.map((account) => {
           const { connection, cost, monthly, billed } = account;
-          const who = accountName(connection);
-          const note = monthly === null ? null : originalNote(monthly, " / month");
+          const who = zhAccountName(connection);
+          const note = monthly === null ? null : originalNote(monthly, " / 月");
           const annual = cost?.kind === "paid" && cost.cycle === "annual";
           const detail = [
-            annual ? "Annual" : "Monthly",
-            annual && billed !== null ? `${figureText(billed)} / year` : null,
-            account.nextRenewal === null ? null : `renews ${dayLabel(account.nextRenewal)}`,
+            annual ? "按年" : "按月",
+            annual && billed !== null ? `${figureText(billed)} / 年` : null,
+            account.nextRenewal === null ? null : `${zhDay(account.nextRenewal)}续订`,
           ]
             .filter((part) => part !== null)
             .join(" · ");
@@ -310,16 +306,14 @@ function SubscriptionsPopover(props: {
         })}
       </ul>
       <p className="w-pop-total">
-        <span>Total per month</span>
+        <span>每月合计</span>
         <span className="num">{formatMoney(summary.monthly.money)}</span>
       </p>
       {summary.monthly.missing === 0 ? null : (
-        <p className="w-pop-note">
-          {plural(summary.monthly.missing, "amount has", "amounts have")} no rate.
-        </p>
+        <p className="w-pop-note">{counted(summary.monthly.missing, "笔金额")}没有汇率。</p>
       )}
       {left.length === 0 ? null : (
-        <p className="w-pop-note">{left.join(" · ")} not shown: they add nothing to the total.</p>
+        <p className="w-pop-note">{left.join(" · ")}未列出：它们不计入合计。</p>
       )}
     </Popover>
   );
@@ -343,8 +337,8 @@ export function SummaryBand(
 
   const topUps = summary.topUpsThisMonth;
   const topUpCaption = [
-    topUps.paidCount > 0 ? `${topUps.paidCount} paid` : null,
-    topUps.freeCount > 0 ? `${topUps.freeCount} free` : null,
+    topUps.paidCount > 0 ? `${topUps.paidCount} 笔付费` : null,
+    topUps.freeCount > 0 ? `${topUps.freeCount} 笔免费` : null,
   ]
     .filter((part) => part !== null)
     .join(" · ");
@@ -357,60 +351,57 @@ export function SummaryBand(
     <dl className="w-band">
       {priced ? (
         <Stat
-          label="Subscriptions"
+          label="订阅"
           value={formatMoney(summary.monthly.money)}
-          unit="/ month"
-          attention={<Attention title="Subscriptions" items={subscriptions} />}
+          unit="/ 月"
+          attention={<Attention title="订阅" items={subscriptions} />}
         >
           {counts.paid === 0 ? (
-            <Line>None paid</Line>
+            <Line>没有付费订阅</Line>
           ) : (
-            <SubscriptionsPopover summary={summary} caption={`${counts.paid} paid`} />
+            <SubscriptionsPopover summary={summary} caption={`${counts.paid} 个付费`} />
           )}
         </Stat>
       ) : (
-        <Stat label="Subscriptions" value={null} empty="Not Set">
-          <Line>Set a cost on each account</Line>
+        <Stat label="订阅" value={null} empty="未设置">
+          <Line>为每个账户设置费用</Line>
         </Stat>
       )}
       {spenders === 0 ? (
-        <Stat label="Usage Spend" value={null}>
-          <Line>No account reports spend</Line>
+        <Stat label="用量支出" value={null}>
+          <Line>没有账户报告支出</Line>
         </Stat>
       ) : (
         <Stat
-          label="Usage Spend"
+          label="用量支出"
           value={formatMoney(summary.usageSpend.money)}
-          attention={<Attention title="Usage Spend" items={usage} />}
+          attention={<Attention title="用量支出" items={usage} />}
         >
-          <UsageSpendPopover
-            summary={summary}
-            caption={`From ${plural(spenders, "provider", "providers")}`}
-          />
+          <UsageSpendPopover summary={summary} caption={`来自 ${spenders} 个服务商`} />
         </Stat>
       )}
       <Stat
-        label="Top-Ups This Month"
+        label="本月充值"
         value={formatMoney(topUps.paid.money)}
-        attention={<Attention title="Top-Ups This Month" items={topUpItems} />}
+        attention={<Attention title="本月充值" items={topUpItems} />}
       >
         {topUps.items.length === 0 ? (
-          <Line>None this month</Line>
+          <Line>本月没有</Line>
         ) : (
           <TopUpsPopover summary={summary} connections={byId} caption={topUpCaption} />
         )}
       </Stat>
       <Stat
-        label="All-In This Month"
+        label="本月总支出"
         value={formatMoney(summary.allIn.money)}
         attention={
           <Attention
-            title="All-In This Month"
+            title="本月总支出"
             items={[...(priced ? subscriptions : []), ...usage, ...topUpItems]}
           />
         }
       >
-        <Line>Plans, usage and top-ups</Line>
+        <Line>套餐、用量和充值</Line>
       </Stat>
     </dl>
   );

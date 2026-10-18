@@ -110,7 +110,7 @@ function SkeletonProvider(props: { readonly cells: number }) {
 export function DashboardSkeleton() {
   return (
     <div aria-busy="true">
-      <LoadingNote>Loading accounts</LoadingNote>
+      <LoadingNote>正在加载账户</LoadingNote>
       <SkeletonProvider cells={3} />
       <SkeletonProvider cells={2} />
     </div>

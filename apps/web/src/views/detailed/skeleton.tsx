@@ -51,8 +51,8 @@ function SkeletonRow() {
   );
 }
 
-const orders = ["By Urgency", "By Provider", "Custom"] as const;
-const limitViews = ["Left", "Used"] as const;
+const orders = ["按紧急程度", "按服务商", "自定义"] as const;
+const limitViews = ["剩余", "已用"] as const;
 const chipNames = [64, 52, 76, 58, 70] as const;
 
 /** An inert segmented control. The chosen segment comes from saved settings, so none shows as chosen. */
@@ -72,7 +72,7 @@ function SkeletonSegmented(props: { readonly labels: readonly string[] }) {
 export function DetailedSkeleton() {
   return (
     <div aria-busy="true">
-      <LoadingNote>Loading accounts</LoadingNote>
+      <LoadingNote>正在加载账户</LoadingNote>
       <div className="d-tools" aria-hidden="true">
         <div className="ptokens">
           <span className="ptoken">
@@ -95,7 +95,7 @@ export function DetailedSkeleton() {
             inert
           >
             <ReorderIcon />
-            Arrange
+            调整顺序
           </button>
         </div>
       </div>

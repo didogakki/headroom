@@ -29,10 +29,10 @@ export function SecretRotation(props: {
     return (
       <div className="dl-rotation stage">
         <SecretCard secret={secret} />
-        <p className="muted dl-note">Shown once. Add it to your receiver now.</p>
+        <p className="muted dl-note">只显示这一次。请现在把它添加到你的接收端。</p>
         <div className="dl-actions">
           <Button variant="primary" size="sm" onClick={props.onClose}>
-            Done
+            完成
           </Button>
         </div>
       </div>
@@ -40,14 +40,14 @@ export function SecretRotation(props: {
   }
   return (
     <div className="dl-rotation stage">
-      <p className="secondary dl-lead">The old secret stops working at once.</p>
+      <p className="secondary dl-lead">旧密钥会立即失效。</p>
       <Problem>{problem}</Problem>
       <div className="dl-actions">
-        <Button variant="primary" size="sm" busy={busy} busyLabel="Making" onClick={make}>
-          Make New Secret
+        <Button variant="primary" size="sm" busy={busy} busyLabel="正在生成" onClick={make}>
+          生成新密钥
         </Button>
         <Button variant="quiet" size="sm" disabled={busy} onClick={props.onClose}>
-          Cancel
+          取消
         </Button>
       </div>
     </div>

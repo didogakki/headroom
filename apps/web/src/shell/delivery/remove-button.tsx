@@ -26,13 +26,13 @@ export function RemoveButton(props: { readonly onRemove: () => Promise<void> }) 
       size="sm"
       variant="quiet-danger"
       busy={busy}
-      busyLabel="Removing"
+      busyLabel="正在移除"
       onClick={press}
       onBlur={() => {
         if (!busy) setArmed(false);
       }}
     >
-      {armed ? "Confirm Remove" : "Remove"}
+      {armed ? "确认移除" : "移除"}
     </Button>
   );
 }

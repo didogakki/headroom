@@ -7,7 +7,7 @@ import {
   type AutoResetRule,
 } from "@headroom/core/contracts";
 import { autoResetAccounts, spendRows, type SpendRow } from "@headroom/view-model/automation";
-import { accountName, planLabel, providerName } from "@headroom/view-model/labels";
+import { planLabel, providerName } from "@headroom/view-model/labels";
 import type { OverviewConnection } from "@headroom/view-model/overview";
 import { formatNumber, formatUsd } from "@headroom/view-model/present";
 import { parsePositive } from "@headroom/view-model/wallet-money";
@@ -15,6 +15,7 @@ import { parsePositive } from "@headroom/view-model/wallet-money";
 import { ApiError, api, demoRefusal, isDemoRefusal } from "../api.ts";
 import { BrandMark } from "../icons.tsx";
 import { useSettings } from "../lib/settings.tsx";
+import { zhAccountName, zhLabel, zhMessage } from "../lib/zh.ts";
 import { Button } from "../ui/button.tsx";
 import { MoneyInput } from "../ui/money-input.tsx";
 import { Select, type SelectOption } from "../ui/select.tsx";
@@ -26,14 +27,14 @@ import "./automations.css";
 
 /** What a failed save says. A refused demo call says why; anything else keeps the old setting. */
 function failureText(cause: unknown): string {
-  if (isDemoRefusal(cause)) return demoRefusal;
+  if (isDemoRefusal(cause)) return zhMessage(demoRefusal);
   if (cause instanceof ApiError && cause.code === "unsupported_action") {
-    return "This account cannot use a banked reset.";
+    return "此账户无法使用已存重置。";
   }
   if (cause instanceof ApiError && cause.code === "not_a_spend_metric") {
-    return "Budgets work on spend figures only.";
+    return "预算只适用于支出数据。";
   }
-  return "Could not save. Nothing was changed.";
+  return "无法保存，未做任何更改。";
 }
 
 /** Who a row is about: the provider mark, the account's name, and its plan and email under it. */
@@ -49,7 +50,7 @@ function AccountLabel(props: {
     <span className="sbody auto-who">
       <b>
         <BrandMark provider={connection.provider} />
-        <span>{props.title ?? accountName(connection)}</span>
+        <span>{props.title ?? zhAccountName(connection)}</span>
       </b>
       <span className="muted">
         {providerName(connection.provider)}
@@ -70,16 +71,16 @@ function AccountLabel(props: {
 
 type Window = AutoResetRule["window"];
 const windowOptions: readonly SelectOption<Window>[] = [
-  { value: "weekly", label: "Weekly" },
-  { value: "session", label: "5-Hour" },
-  { value: "either", label: "Either" },
+  { value: "weekly", label: "每周" },
+  { value: "session", label: "5 小时" },
+  { value: "either", label: "任一" },
 ];
 const thresholdOptions: readonly SelectOption<`${AutoResetRule["thresholdPercent"]}`>[] =
-  autoResetThresholds.map((value) => ({ value: `${value}`, label: `${value}% Used` }));
+  autoResetThresholds.map((value) => ({ value: `${value}`, label: `已用 ${value}%` }));
 const hoursOptions: readonly SelectOption<`${AutoResetRule["minHoursLeft"]}`>[] =
   autoResetMinHoursLeft.map((value) => ({
     value: `${value}`,
-    label: value === 1 ? "1 hour" : `${value} hours`,
+    label: `${value}小时`,
   }));
 
 /**
@@ -114,7 +115,7 @@ function AutoResetRow(props: {
     };
     chain.current = chain.current.then(send);
   };
-  const name = accountName(connection);
+  const name = zhAccountName(connection);
   return (
     <div className="auto-row" data-on={rule.enabled ? "" : undefined}>
       {/* oxlint-disable-next-line jsx-a11y/label-has-associated-control -- the Switch component renders the input */}
@@ -122,20 +123,20 @@ function AutoResetRow(props: {
         <AccountLabel connection={connection} />
         <Switch
           checked={rule.enabled}
-          label={`Auto-reset for ${name}`}
+          label={`${name}的自动重置`}
           onChange={(enabled) => save({ enabled })}
         />
       </label>
       <div className="auto-opts">
         <Select
-          label="Window"
+          label="窗口"
           size="sm"
           value={rule.window}
           options={windowOptions}
           onChange={(window) => save({ window })}
         />
         <Select
-          label="Fire At"
+          label="触发条件"
           size="sm"
           value={`${rule.thresholdPercent}` as const}
           options={thresholdOptions}
@@ -145,7 +146,7 @@ function AutoResetRow(props: {
           }}
         />
         <Select
-          label="Skip If Resets Within"
+          label="距重置不足时跳过"
           size="sm"
           value={`${rule.minHoursLeft}` as const}
           options={hoursOptions}
@@ -172,19 +173,17 @@ function AutoResetSection(props: {
   const waiting = useContext(WaitingContext);
   const accounts = autoResetAccounts(props.connections);
   return (
-    <Section title="Auto-Reset">
+    <Section title="自动重置">
       <p className="auto-note muted">
-        Uses the reset that expires first, once per window. Not yet validated, so the first try may
-        fail.
+        使用最先到期的重置，每个窗口一次。尚未验证，首次尝试可能失败。
       </p>
       {waiting || settings.accountActions ? null : (
         <output className="auto-hint">
-          Allow Account Actions is off. Rules are saved but do not fire until you turn it on in
-          General.
+          “允许账户操作”已关闭。规则会被保存，但在你于“常规”中开启之前不会触发。
         </output>
       )}
       {accounts.length === 0 ? (
-        <p className="auto-empty muted">No connected account can use a banked reset yet.</p>
+        <p className="auto-empty muted">还没有可使用已存重置的已连接账户。</p>
       ) : (
         accounts.map((connection) => (
           <AutoResetRow key={connection.id} connection={connection} onChanged={props.onChanged} />
@@ -197,10 +196,10 @@ function AutoResetSection(props: {
 // ---------- Budgets ----------
 
 function spendText(row: SpendRow): string {
-  if (row.value === null) return "Spend unknown";
+  if (row.value === null) return "支出未知";
   return row.unit === "USD"
-    ? `Spent ${formatUsd(row.value)}`
-    : `Used ${formatNumber(row.value, Number.isInteger(row.value) ? 0 : 2)} ${row.value === 1 ? "credit" : "credits"}`;
+    ? `已支出 ${formatUsd(row.value)}`
+    : `已使用 ${formatNumber(row.value, Number.isInteger(row.value) ? 0 : 2)} 积分`;
 }
 
 const dollars = ["USD"] as const;
@@ -242,14 +241,14 @@ function BudgetRow(props: { readonly row: SpendRow; readonly onChanged: () => Pr
       <div className="srow auto-budget-head">
         <AccountLabel
           connection={row.connection}
-          title={`${accountName(row.connection)} · ${row.label}`}
+          title={`${zhAccountName(row.connection)} · ${zhLabel(row.label)}`}
           detail={spendText(row)}
         />
       </div>
       <div className="auto-budget">
         {usd ? (
           <MoneyInput
-            label="Budget"
+            label="预算"
             minor={minor}
             currency="USD"
             currencies={dollars}
@@ -257,10 +256,10 @@ function BudgetRow(props: { readonly row: SpendRow; readonly onChanged: () => Pr
           />
         ) : (
           <TextField
-            label="Budget (Credits)"
+            label="预算（积分）"
             value={text}
             inputMode="decimal"
-            error={invalidText ? "Enter a number above zero." : null}
+            error={invalidText ? "请输入大于零的数字。" : null}
             onChange={setText}
           />
         )}
@@ -269,10 +268,10 @@ function BudgetRow(props: { readonly row: SpendRow; readonly onChanged: () => Pr
           size="sm"
           disabled={!dirty || busy !== null}
           busy={busy === "save"}
-          busyLabel="Saving"
+          busyLabel="正在保存"
           onClick={() => void run("save")}
         >
-          Set Budget
+          设置预算
         </Button>
         {row.budget === null ? null : (
           <Button
@@ -280,10 +279,10 @@ function BudgetRow(props: { readonly row: SpendRow; readonly onChanged: () => Pr
             size="sm"
             disabled={busy !== null}
             busy={busy === "clear"}
-            busyLabel="Clearing"
+            busyLabel="正在清除"
             onClick={() => void run("clear")}
           >
-            Clear
+            清除
           </Button>
         )}
       </div>
@@ -302,12 +301,10 @@ function BudgetsSection(props: {
 }) {
   const rows = spendRows(props.connections);
   return (
-    <Section title="Budgets">
-      <p className="auto-note muted">
-        Notifies you when spend nears your limit and again when it passes.
-      </p>
+    <Section title="预算">
+      <p className="auto-note muted">支出接近你设置的上限时通知你，超过时再通知一次。</p>
       {rows.length === 0 ? (
-        <p className="auto-empty muted">No connected account reports spend yet.</p>
+        <p className="auto-empty muted">还没有已连接账户报告支出。</p>
       ) : (
         rows.map((row) => (
           <BudgetRow

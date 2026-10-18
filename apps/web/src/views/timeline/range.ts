@@ -9,21 +9,7 @@ import type { TimelineKind } from "./lanes.ts";
 const hour = 3_600_000;
 const day = 24 * hour;
 
-const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-const months = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
+const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
 
 export interface Axis {
   readonly kind: TimelineKind;
@@ -31,7 +17,7 @@ export interface Axis {
   readonly end: number;
   /** The start of every column, in order. The columns are equal width. */
   readonly columns: readonly number[];
-  /** "14 Days", for the range label. */
+  /** "14天", for the range label. */
   readonly size: string;
   /** What one step moves by, for the stepper's accessible names. */
   readonly stepWord: string;
@@ -60,8 +46,8 @@ export function axisFor(kind: TimelineKind, now: number, step: number): Axis {
       base,
       end: localDay(base, 14),
       columns: daily(base, 14, 1),
-      size: "14 Days",
-      stepWord: "Week",
+      size: "14天",
+      stepWord: "一周",
     };
   }
   if (kind === "session") {
@@ -74,8 +60,8 @@ export function axisFor(kind: TimelineKind, now: number, step: number): Axis {
       base,
       end: base + day,
       columns: Array.from({ length: 12 }, (_, index) => base + index * 2 * hour),
-      size: "24 Hours",
-      stepWord: "Day",
+      size: "24小时",
+      stepWord: "一天",
     };
   }
   const base = localDay(now, -28 + step * 28);
@@ -84,40 +70,41 @@ export function axisFor(kind: TimelineKind, now: number, step: number): Axis {
     base,
     end: localDay(base, 70),
     columns: daily(base, 10, 7),
-    size: "10 Weeks",
-    stepWord: "4 Weeks",
+    size: "10周",
+    stepWord: "4周",
   };
 }
 
-/** "Oct 5". */
+/** "10月". */
 export function shortMonth(t: number): string {
-  return months[new Date(t).getMonth()] ?? "";
+  return `${new Date(t).getMonth() + 1}月`;
 }
 
+/** "10月5日". */
 export function shortDay(t: number): string {
   const at = new Date(t);
-  return `${months[at.getMonth()] ?? ""} ${at.getDate()}`;
+  return `${at.getMonth() + 1}月${at.getDate()}日`;
 }
 
 export function weekday(t: number): string {
   return weekdays[new Date(t).getDay()] ?? "";
 }
 
-/** "19:00" or "7:00 PM", from the owner's clock setting. */
+/** "19:00" or "下午7:00", from the owner's clock setting. */
 export function clockText(t: number, clock: Clock): string {
   const at = new Date(t);
   const minutes = String(at.getMinutes()).padStart(2, "0");
   const hours = at.getHours();
   if (clock === "24h") return `${String(hours).padStart(2, "0")}:${minutes}`;
-  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
+  return `${hours < 12 ? "上午" : "下午"}${hours % 12 || 12}:${minutes}`;
 }
 
-/** "Mon 19:00". */
+/** "周一 19:00". */
 export function dayClock(t: number, clock: Clock): string {
   return `${weekday(t)} ${clockText(t, clock)}`;
 }
 
-/** "Sep 26 – Oct 9 · 14 Days". One date when the range sits inside a single day. */
+/** "9月26日 – 10月9日 · 14天". One date when the range sits inside a single day. */
 export function rangeLabel(axis: Axis): string {
   const first = shortDay(axis.base);
   const last = shortDay(axis.end - 1);

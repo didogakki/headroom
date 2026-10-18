@@ -1,7 +1,7 @@
 import type { StepState } from "../../ui/stepper.tsx";
 
-export const telegramWords = ["Bot", "Chat", "Test", "Done"] as const;
-export const webhookWords = ["URL", "Secret", "Test", "Done"] as const;
+export const telegramWords = ["机器人", "聊天", "测试", "完成"] as const;
+export const webhookWords = ["URL", "密钥", "测试", "完成"] as const;
 
 export type Stage = "first" | "second" | "test" | "done";
 const order: readonly Stage[] = ["first", "second", "test", "done"];

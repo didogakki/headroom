@@ -12,6 +12,7 @@ import { useLoad } from "./lib/load.ts";
 import { BrandMark, PlugIcon } from "./icons.tsx";
 import { providerName } from "@headroom/view-model/labels";
 import { useSettings } from "./lib/settings.tsx";
+import { zhMessage } from "./lib/zh.ts";
 import { cx } from "./ui/cx.ts";
 import { EmptyState } from "./ui/empty-state.tsx";
 import { ErrorNotice } from "./ui/error-notice.tsx";
@@ -110,25 +111,21 @@ export function ConnectPage(
     <div className="connect-page">
       <div className="intro">
         {naming ? (
-          <h1 className="sk-slot" aria-busy="true" aria-label="Reconnect">
+          <h1 className="sk-slot" aria-busy="true" aria-label="重新连接">
             <Sk kind="big" width={240} height={33} />
           </h1>
         ) : (
-          <h1>{reconnecting ? `Reconnect ${name}`.trim() : "Connect an Account"}</h1>
+          <h1>{reconnecting ? `重新连接 ${name}`.trim() : "连接账户"}</h1>
         )}
-        <p>
-          {reconnecting
-            ? "Sign in again to restore this account."
-            : "Choose a provider. You only sign in once."}
-        </p>
+        <p>{reconnecting ? "重新登录以恢复此账户。" : "选择一个服务商。你只需登录一次。"}</p>
       </div>
       {existing.error === null ? null : (
         <div className="cards-note">
           {existing.error === demoConnectRefusal ? (
-            <ErrorNotice>{demoConnectRefusal}</ErrorNotice>
+            <ErrorNotice>{zhMessage(demoConnectRefusal)}</ErrorNotice>
           ) : (
             <ErrorNotice busy={existing.pending} onRetry={existing.reload}>
-              Headroom could not load this account. Check that it is running and try again.
+              Headroom 无法加载此账户。请确认 Headroom 服务正在运行，然后重试。
             </ErrorNotice>
           )}
         </div>
@@ -136,7 +133,7 @@ export function ConnectPage(
       {providers.data === null && providers.error !== null ? (
         <div className="cards-note">
           <ErrorNotice busy={providers.pending} onRetry={providers.reload}>
-            Headroom could not load the providers. Check that it is running and try again.
+            Headroom 无法加载服务商列表。请确认 Headroom 服务正在运行，然后重试。
           </ErrorNotice>
         </div>
       ) : null}
@@ -145,9 +142,8 @@ export function ConnectPage(
       ) : null}
       {!reconnecting && providers.data !== null && entries.length === 0 ? (
         <div className="cards-note">
-          <EmptyState framed icon={<PlugIcon />} title="No Providers Switched On">
-            None are switched on in the server settings. Turn one on there, restart Headroom, and it
-            appears here.
+          <EmptyState framed icon={<PlugIcon />} title="没有启用任何服务商">
+            服务器设置中没有启用任何服务商。请在那里启用一个并重启 Headroom，它就会出现在这里。
           </EmptyState>
         </div>
       ) : null}
@@ -167,7 +163,7 @@ export function ConnectPage(
               </span>
               {defaultMethod(entry.methods, entry.availability) === null &&
               entry.methods.length > 0 ? (
-                <span className="card-note">Not Available on This Server</span>
+                <span className="card-note">此服务器上不可用</span>
               ) : null}
             </button>
           ))}

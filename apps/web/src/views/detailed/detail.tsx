@@ -6,6 +6,7 @@ import { awaitingFirstRefresh, providerName } from "@headroom/view-model/labels"
 import { presentPanel } from "@headroom/view-model/present";
 import { useNow } from "../../lib/now.ts";
 import { usePanelDisplay } from "../../lib/settings.tsx";
+import { zhFactValue, zhLabel } from "../../lib/zh.ts";
 import { href } from "../../router.ts";
 import { BankedResets } from "../../ui/banked-resets.tsx";
 import { ButtonLink } from "../../ui/button.tsx";
@@ -15,26 +16,26 @@ function noticeFor(connection: OverviewConnection, hasCells: boolean): ReactNode
   if (connection.state === "reconnect_required") {
     return (
       <p className="d-note">
-        The sign-in for this account has expired.{" "}
+        此账户的登录已过期。{" "}
         <ButtonLink
           variant="primary"
           size="sm"
           href={href({ page: "reconnect", id: connection.id })}
         >
-          Reconnect
+          重新连接
         </ButtonLink>
       </p>
     );
   }
   if (connection.state === "paused") {
-    return <p className="d-note">Paused. Headroom is not refreshing this account.</p>;
+    return <p className="d-note">已暂停。Headroom 不会刷新此账户。</p>;
   }
   if (!hasCells && awaitingFirstRefresh(connection)) {
-    return <p className="d-note">Connected just now. The first refresh is running.</p>;
+    return <p className="d-note">刚刚连接。首次刷新正在进行。</p>;
   }
   if (connection.stale) {
     return (
-      <p className="d-note">{`${providerName(connection.provider)} has not answered for a while. These numbers are from the last good refresh.`}</p>
+      <p className="d-note">{`${providerName(connection.provider)} 已有一段时间没有响应。这些数字来自上一次成功的刷新。`}</p>
     );
   }
   return null;
@@ -66,7 +67,7 @@ export function RowDetail(props: { readonly connection: OverviewConnection }) {
           )}
           {model.facts.map((fact) => (
             <span className="kv" key={fact.key}>
-              {fact.label} <b>{fact.value}</b>
+              {zhLabel(fact.label)} <b>{zhFactValue(fact.value)}</b>
             </span>
           ))}
         </div>

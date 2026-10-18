@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { resetVerb } from "../../lib/reset-caption.tsx";
-import { countdown, exactFull } from "@headroom/view-model/time";
+import { zhCountdown, zhExactFull } from "../../lib/zh.ts";
 import { cx } from "../../ui/cx.ts";
 import { DayLabel } from "./day-label.tsx";
 import { LaneBars, type Tips } from "./lane-bars.tsx";
@@ -33,10 +33,10 @@ function ColumnHead(props: {
     bottom = <DayLabel t={start} />;
   } else if (axis.kind === "session") {
     const midnight = new Date(start).getHours() === 0;
-    top = index === 0 || midnight ? `${weekday(start)} ${new Date(start).getDate()}` : "";
+    top = index === 0 || midnight ? `${weekday(start)} ${new Date(start).getDate()}日` : "";
     bottom = clockText(start, props.clock);
   } else {
-    top = "Week of";
+    top = "周起始";
     bottom = shortDay(start);
   }
   return (
@@ -64,7 +64,7 @@ export function TimelineGrid(props: {
     <div className="tl-grid" style={gridStyle}>
       <div className="tl-hrow">
         <div className="tl-corner">
-          Account<span>{`Limits · ${context.view === "left" ? "Left" : "Used"}`}</span>
+          账户<span>{`额度 · ${context.view === "left" ? "剩余" : "已用"}`}</span>
         </div>
         <div className="tl-cols">
           {axis.columns.map((start, column) => (
@@ -110,7 +110,7 @@ export function TimelineGrid(props: {
         )}
         {nowX === null ? null : (
           <span className="tl-nowline" style={{ left: `${nowX}%` }}>
-            <b>Now</b>
+            <b>现在</b>
           </span>
         )}
       </div>
@@ -137,10 +137,10 @@ export function TimelineList(props: {
             const axis = { base: lane.start, end: lane.start + span };
             const caption =
               lane.phase === "idle"
-                ? "Not Started · Opens when you next use it"
+                ? "未开始 · 下次使用时开启"
                 : lane.phase === "ended"
-                  ? `Ended ${resetShort(lane.kind, lane.end, clock)}`
-                  : `${resetVerb(lane.drawn.resetWords)} in ${countdown(lane.end, now)} · ${exactFull(lane.end, now, clock)}`;
+                  ? `已结束 ${resetShort(lane.kind, lane.end, clock)}`
+                  : `${zhCountdown(lane.end, now)}后${resetVerb(lane.drawn.resetWords)} · ${zhExactFull(lane.end, now, clock)}`;
             return (
               <div
                 key={lane.id}

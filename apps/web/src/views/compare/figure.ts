@@ -2,6 +2,7 @@ import type { Provider } from "@headroom/core/contracts";
 
 import type { MeterWindow } from "@headroom/view-model/accounts";
 import { displayMeter, type Caption, type LimitsView, type Tone } from "@headroom/view-model/tone";
+import { zhUnit } from "../../lib/zh.ts";
 
 /** How the owner reads limits: used or left, and where "running low" starts. */
 export interface Look {
@@ -22,7 +23,7 @@ export type Figure =
   | { readonly kind: "unknown" }
   | {
       readonly kind: "known";
-      /** For example "88% left" or "12%". */
+      /** For example "88% 剩余" or "12%". */
       readonly text: string;
       readonly fill: number;
       readonly tone: Tone;
@@ -38,7 +39,7 @@ function figureOfUsed(used: number | null, provider: Provider, look: Look): Figu
   if (shown.value === null || shown.fill === null) return { kind: "unknown" };
   return {
     kind: "known",
-    text: `${shown.value}${shown.unit}`,
+    text: `${shown.value}${zhUnit(shown.unit)}`,
     fill: shown.fill,
     tone: shown.tone ?? "good",
     caption: shown.caption,

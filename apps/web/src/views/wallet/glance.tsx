@@ -2,7 +2,7 @@ import { useId, type ReactNode } from "react";
 
 import { BrandMark, ChevronDownIcon } from "../../icons.tsx";
 import type { OverviewConnection } from "@headroom/view-model/overview";
-import { daysBetween, dueIn, monthName } from "@headroom/view-model/wallet-dates";
+import { daysBetween } from "@headroom/view-model/wallet-dates";
 import { formatMoney } from "@headroom/view-model/wallet-money";
 import {
   renewalWindowDays,
@@ -11,6 +11,7 @@ import {
   type WalletSummary,
 } from "@headroom/view-model/wallet";
 
+import { zhDueIn, zhMonthName } from "../../lib/zh.ts";
 import { Popover } from "../../ui/menu.tsx";
 import { SparkBars, type SparkBar } from "../../ui/spark-bars.tsx";
 import { figureText, renewalName } from "./amount.ts";
@@ -55,32 +56,32 @@ export function TopUpsCard(props: { readonly summary: WalletSummary }) {
   const minor = topUpMonths.reduce((sum, entry) => sum + entry.paid.money.minor, 0);
   const missing = topUpMonths.reduce((sum, entry) => sum + entry.paid.missing, 0);
   const unpriced = topUpMonths.reduce((sum, entry) => sum + entry.unpriced, 0);
-  const note = `Last ${topUpMonthCount} months`;
+  const note = `最近 ${topUpMonthCount} 个月`;
   if (inWindow.length === 0) {
     return (
-      <GlanceCard title="Top-Ups" note={note}>
-        <p className="w-spend-empty muted">No top-ups yet.</p>
+      <GlanceCard title="充值" note={note}>
+        <p className="w-spend-empty muted">还没有充值。</p>
       </GlanceCard>
     );
   }
   const bars = topUpMonths.map((entry, index): SparkBar => ({
     key: entry.month,
-    label: monthName(entry.month),
+    label: zhMonthName(entry.month),
     value: entry.paid.money.minor,
     display: formatMoney(entry.paid.money),
     active: index === topUpMonths.length - 1,
   }));
   const footer = [
-    `Total ${formatMoney({ minor, currency })}`,
-    free === 0 ? null : `${free} free`,
-    missing === 0 ? null : `${missing} without rate`,
-    unpriced === 0 ? null : `${unpriced} price not set`,
+    `合计 ${formatMoney({ minor, currency })}`,
+    free === 0 ? null : `${free} 笔免费`,
+    missing === 0 ? null : `${missing} 笔无汇率`,
+    unpriced === 0 ? null : `${unpriced} 笔未设置价格`,
   ]
     .filter((part) => part !== null)
     .join(" · ");
   return (
-    <GlanceCard title="Top-Ups" note={note} footer={footer}>
-      <SparkBars label={`Paid top-ups per month, ${note.toLowerCase()}`} bars={bars} height={120} />
+    <GlanceCard title="充值" note={note} footer={footer}>
+      <SparkBars label={`每月付费充值，${note}`} bars={bars} height={120} />
     </GlanceCard>
   );
 }
@@ -98,12 +99,12 @@ function RenewalRow(props: { readonly item: RenewalItem; readonly today: string 
     <li className={days <= 2 ? "soon" : undefined}>
       <span className="w-day-tile">
         <b className="num">{Number(renewal.date.slice(8, 10))}</b>
-        <span>{monthName(renewal.date.slice(0, 7))}</span>
+        <span>{zhMonthName(renewal.date.slice(0, 7))}</span>
       </span>
       <BrandMark provider={connection.provider} />
       <span className="w-renewal-text">
         <span className="w-renewal-name">{renewalName(connection)}</span>
-        <span className="w-renewal-when">{dueIn(days)}</span>
+        <span className="w-renewal-when">{zhDueIn(days)}</span>
       </span>
       <span className="w-renewal-amount num">{figureText(renewal.price)}</span>
     </li>
@@ -116,12 +117,12 @@ function MoreRenewals(props: {
   readonly today: string;
   readonly total: string;
 }) {
-  const caption = `${props.items.length} more ${props.items.length === 1 ? "renewal" : "renewals"}`;
+  const caption = `另有 ${props.items.length} 笔续订`;
   return (
     <>
       <Popover
         label={caption}
-        panelLabel="More upcoming renewals"
+        panelLabel="更多即将到来的续订"
         panelClassName="notif w-renewals-pop"
         triggerClassName="w-cap-trigger"
         // The trigger sits at the left of the footer, so the panel opens rightward.
@@ -159,11 +160,11 @@ export function RenewalsCard(props: {
     const connection = byId.get(renewal.connectionId);
     return connection === undefined ? [] : [{ renewal, connection }];
   });
-  const window = `Next ${renewalWindowDays} days`;
+  const window = `未来 ${renewalWindowDays} 天`;
   if (items.length === 0) {
     return (
-      <GlanceCard title="Upcoming Renewals" note={window}>
-        <p className="w-spend-empty muted">No renewals in the next {renewalWindowDays} days</p>
+      <GlanceCard title="即将到来的续订" note={window}>
+        <p className="w-spend-empty muted">未来 {renewalWindowDays} 天没有续订</p>
       </GlanceCard>
     );
   }
@@ -175,8 +176,8 @@ export function RenewalsCard(props: {
   const rest = items.slice(listed);
   return (
     <GlanceCard
-      title="Upcoming Renewals"
-      note={`${shownTotal(items)} in ${renewalWindowDays} days`}
+      title="即将到来的续订"
+      note={`${renewalWindowDays} 天内共 ${shownTotal(items)}`}
       split
       footer={
         rest.length === 0 ? undefined : (

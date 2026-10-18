@@ -23,29 +23,33 @@ const exactValue: SettingsValue = {
 describe("When", () => {
   const soon = Date.now() + 52 * 60_000 + 30_000;
   test("countdown by default, with the exact time in the title", () => {
-    const html = renderToString(<When at={soon} kind="until" prefix="Resets" />);
-    expect(html).toContain("Resets in ");
-    expect(html).toContain(">52 min</time>");
+    const html = renderToString(<When at={soon} kind="until" suffix="重置" />);
+    expect(html).toContain(">52分钟后</time>重置");
     expect(html).toContain('class="when"');
     expect(html).toContain(`dateTime="${new Date(soon).toISOString()}"`);
-    expect(html).toMatch(/title="(Today · |[A-Z][a-z]{2}, )/);
+    expect(html).toMatch(/title="(今天 |\d{1,2}月\d{1,2}日 周.)/);
   });
-  test("exact style drops the in", () => {
+  test("exact style drops the countdown's 后", () => {
     const html = renderToString(
       <SettingsContext.Provider value={exactValue}>
-        <When at={soon} kind="until" prefix="Resets" />
+        <When at={soon} kind="until" suffix="重置" />
       </SettingsContext.Provider>,
     );
-    expect(html).not.toContain("Resets in");
-    // Near midnight the time falls on the next day, which names the date instead of "at".
+    expect(html).not.toContain("52分钟后</time>");
+    // Near midnight the time falls on the next day, which names the date.
     expect(html).toMatch(
-      /Resets <time[^>]*>(at|[A-Z][a-z]{2}, [A-Z][a-z]{2} \d{1,2} ·) \d{1,2}:\d{2} (AM|PM)<\/time>/,
+      /<time[^>]*>(\d{1,2}月\d{1,2}日 周. )?(上午|下午)\d{1,2}:\d{2}<\/time>重置/,
     );
-    expect(html).toContain('title="52 min"');
+    expect(html).toContain('title="52分钟后"');
+  });
+  test("a prefix comes before the time", () => {
+    const html = renderToString(<When at={soon} kind="until" prefix="最早" suffix="到期" />);
+    expect(html).toContain("最早<time");
+    expect(html).toContain("</time>到期");
   });
   test("ago without a prefix", () => {
     const html = renderToString(<When at={Date.now() - 12 * 60_000 - 5_000} kind="ago" />);
-    expect(html).toContain(">12 min ago</time>");
+    expect(html).toContain(">12分钟前</time>");
   });
 });
 

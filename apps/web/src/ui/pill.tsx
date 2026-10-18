@@ -32,13 +32,13 @@ export type StatusKind =
   | "waiting";
 
 const statusLook: Record<StatusKind, { tone: PillTone; icon: ReactNode; words: string }> = {
-  active: { tone: "good", icon: <span className="dot" aria-hidden="true" />, words: "Active" },
-  paused: { tone: "quiet", icon: <PauseIcon />, words: "Paused" },
-  disconnected: { tone: "bad", icon: <AlertIcon />, words: "Disconnected" },
-  refresh_failed: { tone: "neutral", icon: <RetryIcon />, words: "Refresh Failed" },
-  out_of_date: { tone: "warn", icon: <ClockIcon />, words: "Out of Date" },
-  partial: { tone: "warn", icon: <PartialIcon />, words: "Partial" },
-  waiting: { tone: "quiet", icon: <ClockIcon />, words: "Waiting for First Refresh" },
+  active: { tone: "good", icon: <span className="dot" aria-hidden="true" />, words: "正常" },
+  paused: { tone: "quiet", icon: <PauseIcon />, words: "已暂停" },
+  disconnected: { tone: "bad", icon: <AlertIcon />, words: "已断开" },
+  refresh_failed: { tone: "neutral", icon: <RetryIcon />, words: "刷新失败" },
+  out_of_date: { tone: "warn", icon: <ClockIcon />, words: "数据过期" },
+  partial: { tone: "warn", icon: <PartialIcon />, words: "部分" },
+  waiting: { tone: "quiet", icon: <ClockIcon />, words: "等待首次刷新" },
 };
 
 /** The status of an account as a pill: icon and words, never colour alone. `label` overrides the words. */

@@ -6,12 +6,13 @@ import { FingerprintIcon, PlusIcon } from "../icons.tsx";
 import { isDemoSite } from "../lib/site.ts";
 import { useLoad } from "../lib/load.ts";
 import { shortDate } from "@headroom/view-model/time";
+import { zhDates } from "../lib/zh.ts";
 import { Button } from "../ui/button.tsx";
 import { Dialog } from "../ui/dialog.tsx";
 import { EmptyState } from "../ui/empty-state.tsx";
 import { ErrorNotice } from "../ui/error-notice.tsx";
 import { PasswordField } from "../ui/password-field.tsx";
-import { PasswordStrength } from "../ui/password-strength.tsx";
+import { PasswordStrength, type StrengthCopy } from "../ui/password-strength.tsx";
 import { LoadingNote, Sk } from "../ui/skeleton.tsx";
 
 const resultMs = 1600;
@@ -22,22 +23,51 @@ interface Failure {
   readonly status?: number | undefined;
 }
 
+const changeFailed = "无法修改密码，请重试。";
+
 /** Which field a failed password change belongs to, with plain words. Anything else shows under the form. */
 function passwordError(
   error: Failure,
   minimum: number,
 ): { readonly field: "current" | "next" | "form"; readonly message: string } {
   if (error.code === "INVALID_PASSWORD") {
-    return { field: "current", message: "Your current password is wrong." };
+    return { field: "current", message: "当前密码不正确。" };
   }
   if (error.code === "PASSWORD_TOO_SHORT") {
-    return { field: "next", message: `Use at least ${minimum} characters.` };
+    return { field: "next", message: `请至少使用 ${minimum} 个字符。` };
   }
   if (error.status === 429) {
-    return { field: "form", message: "Too many attempts. Wait a minute and try again." };
+    return { field: "form", message: "尝试次数过多。请等一分钟后再试。" };
   }
-  return { field: "form", message: "Could not change the password. Try again." };
+  return { field: "form", message: changeFailed };
 }
+
+const strengthWords: Readonly<Record<string, string>> = {
+  "Too Short": "太短",
+  Weak: "弱",
+  Fair: "一般",
+  Good: "良好",
+  Strong: "强",
+};
+
+/** The strength meter in Chinese. The score's English labels and rule ids stay the keys. */
+const strengthCopy: StrengthCopy = {
+  meter: "密码强度",
+  checks: "密码检查项",
+  none: "尚未输入密码",
+  word: (label) => strengthWords[label] ?? label,
+  rule: (id, minimum) =>
+    id === "length"
+      ? `至少 ${minimum} 个字符`
+      : id === "plain"
+        ? "不含常见词或键盘连续字符"
+        : "不以重复或连续字符为主",
+  passed: "，已通过",
+  notPassed: "，未通过",
+  more: (count) => `还差 ${count} 个`,
+  summary: (label, met, total) =>
+    `强度：${strengthWords[label] ?? label}。已通过 ${met} 项检查，共 ${total} 项。`,
+};
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -47,7 +77,7 @@ function wait(ms: number): Promise<void> {
 function PasskeysSkeleton() {
   return (
     <>
-      <LoadingNote>Loading passkeys</LoadingNote>
+      <LoadingNote>正在加载通行密钥</LoadingNote>
       <ul className="plist" aria-busy="true">
         {[0, 1].map((index) => (
           <li key={index} aria-hidden="true">
@@ -82,10 +112,10 @@ function Passkeys() {
     try {
       const name = passkeys.length === 0 ? "Passkey" : `Passkey ${passkeys.length + 1}`;
       const result = await authClient.passkey.addPasskey({ name });
-      if (result.error) setError("Could not add the passkey. Try again.");
+      if (result.error) setError("无法添加通行密钥，请重试。");
       else await list.refetch();
     } catch {
-      setError("Could not add the passkey. Try again.");
+      setError("无法添加通行密钥，请重试。");
     }
     setAdding(false);
   };
@@ -93,43 +123,43 @@ function Passkeys() {
     setError(null);
     try {
       const result = await authClient.passkey.deletePasskey({ id });
-      if (result.error) setError("Could not remove the passkey. Try again.");
+      if (result.error) setError("无法移除通行密钥，请重试。");
       else await list.refetch();
     } catch {
-      setError("Could not remove the passkey. Try again.");
+      setError("无法移除通行密钥，请重试。");
     }
   };
 
   return (
     <section className="dsec">
       <div className="dsec-head">
-        <h3>Passkeys</h3>
+        <h3>通行密钥</h3>
         <Button
           size="sm"
           icon={<PlusIcon />}
           busy={adding}
-          busyLabel="Waiting for Your Device"
+          busyLabel="等待你的设备"
           disabled={!ready}
           onClick={() => void add()}
         >
-          Add Passkey
+          添加通行密钥
         </Button>
       </div>
       {list.isPending ? <PasskeysSkeleton /> : null}
       {failed ? (
         <ErrorNotice inline busy={list.isRefetching} onRetry={() => void list.refetch()}>
-          Headroom could not load your passkeys. Check that it is running and try again.
+          Headroom 无法加载你的通行密钥。请确认 Headroom 服务正在运行，然后重试。
         </ErrorNotice>
       ) : null}
       {ready && passkeys.length === 0 ? (
-        <EmptyState compact icon={<FingerprintIcon />} title="No Passkeys Yet">
-          Add one to sign in without a password.
+        <EmptyState compact icon={<FingerprintIcon />} title="还没有通行密钥">
+          添加一个，即可无需密码登录。
         </EmptyState>
       ) : null}
       {ready && passkeys.length > 0 ? (
         <ul className="plist">
           {passkeys.map((passkey) => {
-            const name = passkey.name?.trim() ? passkey.name.trim() : "Passkey";
+            const name = passkey.name?.trim() ? passkey.name.trim() : "通行密钥";
             return (
               <li key={passkey.id}>
                 <span className="pk">
@@ -137,15 +167,15 @@ function Passkeys() {
                 </span>
                 <span className="pbody">
                   <b>{name}</b>
-                  <span className="muted">{`Added ${shortDate(passkey.createdAt.getTime())}`}</span>
+                  <span className="muted">{`添加于${zhDates(shortDate(passkey.createdAt.getTime()))}`}</span>
                 </span>
                 <Button
                   variant="quiet-danger"
                   size="sm"
-                  aria-label={`Remove ${name}`}
+                  aria-label={`移除${name}`}
                   onClick={() => void remove(passkey.id)}
                 >
-                  Remove
+                  移除
                 </Button>
               </li>
             );
@@ -192,7 +222,7 @@ function Password() {
         return;
       }
     } catch {
-      setError("Could not change the password. Try again.");
+      setError(changeFailed);
       setBusy(false);
       return;
     }
@@ -207,11 +237,12 @@ function Password() {
   return (
     <section className="dsec">
       <div className="dsec-head">
-        <h3>Password</h3>
+        <h3>密码</h3>
       </div>
       <form className="pform" onSubmit={(event) => void submit(event)}>
         <PasswordField
-          label="Current Password"
+          label="当前密码"
+          showLabel="显示密码"
           name="current"
           autoComplete="current-password"
           value={current}
@@ -223,7 +254,9 @@ function Password() {
           required
         />
         <PasswordStrength
-          label="New Password"
+          label="新密码"
+          showLabel="显示密码"
+          copy={strengthCopy}
           name="next"
           autoComplete="new-password"
           minimum={minimum}
@@ -242,8 +275,8 @@ function Password() {
           </p>
         )}
         <div className="row">
-          <Button variant="primary" type="submit" busy={busy} busyLabel="Changing">
-            {changed ? "Password Changed" : "Change Password"}
+          <Button variant="primary" type="submit" busy={busy} busyLabel="正在修改">
+            {changed ? "密码已修改" : "修改密码"}
           </Button>
         </div>
       </form>
@@ -254,7 +287,7 @@ function Password() {
 /** Passkeys and password; the demo site has neither. The content mounts only while the dialog is open, so it loads fresh each time. */
 export function AccountDialog(props: { readonly open: boolean; readonly onClose: () => void }) {
   return (
-    <Dialog open={props.open} onClose={props.onClose} title="Account">
+    <Dialog open={props.open} onClose={props.onClose} title="账户">
       {props.open ? (
         <>
           {isDemoSite ? null : <Passkeys />}

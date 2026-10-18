@@ -77,7 +77,7 @@ function AccountGhost() {
 export function CompareSkeleton() {
   return (
     <div className="cmp cmp-sk" aria-busy="true">
-      <LoadingNote>Loading accounts</LoadingNote>
+      <LoadingNote>正在加载账户</LoadingNote>
       <div className="cmp-tools" aria-hidden="true">
         <div className="ptokens">
           <Sk width={104} height={32} className="sk-pill" />
@@ -85,17 +85,17 @@ export function CompareSkeleton() {
         </div>
         <fieldset className="seg" inert>
           <button type="button" tabIndex={-1}>
-            Left
+            剩余
           </button>
           <button type="button" tabIndex={-1}>
-            Used
+            已用
           </button>
         </fieldset>
       </div>
       <div aria-hidden="true">
         <section className="cmp-best">
           <VerifiedSeal tone="muted" />
-          <span className="lead off">Recommended</span>
+          <span className="lead off">推荐</span>
           <span className="acct">
             <Sk kind="text" width={150} />
           </span>
@@ -112,10 +112,10 @@ export function CompareSkeleton() {
               <thead>
                 <tr>
                   <HeadGhost>
-                    <b>Account</b>
+                    <b>账户</b>
                   </HeadGhost>
                   <HeadGhost>
-                    <b>Room Left</b>
+                    <b>剩余额度</b>
                   </HeadGhost>
                   {windowColumns.map((column) => (
                     <HeadGhost key={column}>
@@ -151,7 +151,7 @@ export function CompareSkeleton() {
         </div>
       </div>
       <div className="cmp-singles-head" aria-hidden="true">
-        <h2>More Accounts</h2>
+        <h2>更多账户</h2>
       </div>
       <div className="cmp-singles" aria-hidden="true">
         {[0, 1].map((card) => (

@@ -31,8 +31,8 @@ interface Group {
 }
 
 const limitOptions = [
-  { value: "left", label: "Left" },
-  { value: "used", label: "Used" },
+  { value: "left", label: "剩余" },
+  { value: "used", label: "已用" },
 ] as const;
 
 /** A sort choice belongs to the provider it was made on; another provider starts at the default. */
@@ -100,11 +100,11 @@ export function ComparePage(props: ViewProps) {
         {active === undefined ? (
           // Nothing to compare: the list's heading shares the row with the Left/Used toggle.
           <h2 id={`${panelId}-singles`} className="cmp-title">
-            Accounts
+            账户
           </h2>
         ) : (
           <ProviderTabs
-            label="Provider"
+            label="服务商"
             panelId={panelId}
             value={active.provider}
             tabs={multi.map((group) => ({
@@ -116,7 +116,7 @@ export function ComparePage(props: ViewProps) {
           />
         )}
         <Segmented
-          label="Show limits as"
+          label="额度显示方式"
           value={settings.limitsView}
           options={limitOptions}
           onChange={(limitsView) => void store.update({ limitsView })}
@@ -138,7 +138,7 @@ export function ComparePage(props: ViewProps) {
             onSort={(key) => setChosen({ provider: active.provider, sort: nextSort(sort, key) })}
             bestId={pick.best?.connection.id ?? null}
             look={look}
-            caption={`${name} accounts and their limits`}
+            caption={`${name} 账户及其额度`}
           />
         </div>
       )}
@@ -146,7 +146,7 @@ export function ComparePage(props: ViewProps) {
         <section aria-labelledby={`${panelId}-singles`}>
           {active === undefined ? null : (
             <div className="cmp-singles-head">
-              <h2 id={`${panelId}-singles`}>More Accounts</h2>
+              <h2 id={`${panelId}-singles`}>更多账户</h2>
             </div>
           )}
           <div className="cmp-singles">

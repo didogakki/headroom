@@ -30,7 +30,7 @@ export interface HandleSpec {
   readonly provider: Provider;
   /** The account id; for a provider, the provider itself. */
   readonly id: string;
-  /** The name read aloud: "Claude", "Personal". */
+  /** The name read aloud: "Claude", "个人". */
   readonly label: string;
 }
 
@@ -40,8 +40,7 @@ const holdMs = 150;
 const slop = 3;
 const helpId = "reorder-help";
 
-const help =
-  "Press Space or Enter to pick up, the arrow keys to move, Space or Enter to drop, Escape to cancel.";
+const help = "按空格键或回车键拿起，用方向键移动，再按空格键或回车键放下，按 Esc 取消。";
 
 interface Pending {
   readonly spec: HandleSpec;
@@ -108,13 +107,13 @@ export function useReorder(options: {
       );
       if (index < 0 || total < 2) return false;
       keyboard.current = pointerY === null;
-      setMessage(`Picked up ${spec.label}. Position ${index + 1} of ${total}.`);
+      setMessage(`已拿起${spec.label}。当前第 ${index + 1} 位，共 ${total} 项。`);
       const started = startDrag({
         items,
         index,
         scope,
         pointerY,
-        onMove: (to) => setMessage(`Moved to position ${to + 1} of ${total}.`),
+        onMove: (to) => setMessage(`已移到第 ${to + 1} 位，共 ${total} 项。`),
         onFinish: (result) => {
           const wasKeyboard = keyboard.current;
           session.current = null;
@@ -141,7 +140,7 @@ export function useReorder(options: {
 
   const finish = useCallback((cancel: boolean): void => {
     session.current?.end(cancel);
-    setMessage(cancel ? "Cancelled." : "Dropped.");
+    setMessage(cancel ? "已取消。" : "已放下。");
   }, []);
 
   const onPointerDown = useCallback(
@@ -251,7 +250,7 @@ export function useReorder(options: {
       type="button"
       className="drag-handle"
       data-handle={`${spec.kind}:${spec.id}`}
-      aria-label={`Reorder ${spec.label}`}
+      aria-label={`调整${spec.label}的顺序`}
       aria-describedby={helpId}
       onPointerDown={(event) => onPointerDown(spec, event)}
       onKeyDown={(event) => onKeyDown(spec, event)}

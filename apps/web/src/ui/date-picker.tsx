@@ -27,6 +27,9 @@ import "./fields.css";
 /** Arc closes the calendar about this long after a pick, so the highlight lands first. */
 const closeBeat = 240;
 
+/** Dates, months and weekday names are written in Chinese; the maths stays in UTC `YYYY-MM-DD`. */
+const locale = "zh-CN";
+
 /**
  * Arc's date picker, built natively: a field-styled trigger showing the date in words ("Oct 12, 2026") that opens
  * a month calendar popover. Values are `YYYY-MM-DD` strings. `optional` adds a Clear action.
@@ -132,7 +135,7 @@ export function DatePicker(props: {
   // The roving tab stop: the focused day if it is on show, else the first day of the month that can be reached.
   const tabStop = sameMonth(focus, view) ? focus : clampDate(view, min, max);
   const weeks = monthGrid(view);
-  const weekdays = weekdayLabels();
+  const weekdays = weekdayLabels(locale);
   const error = props.error ?? null;
 
   return (
@@ -168,9 +171,9 @@ export function DatePicker(props: {
         </span>
         <span id={`${id}-value`} className="fld-value">
           {value === null ? (
-            <span className="fld-ph">Pick a date</span>
+            <span className="fld-ph">选择日期</span>
           ) : (
-            <span className="fld-main">{formatShort(value)}</span>
+            <span className="fld-main">{formatShort(value, locale)}</span>
           )}
         </span>
         <span className="fld-chevron" aria-hidden="true">
@@ -183,7 +186,7 @@ export function DatePicker(props: {
         id={layer.panelId}
         className={cx("notif fpop fpop-start fpop-cal", layer.above && "above")}
         role="dialog"
-        aria-label={`${props.label} calendar`}
+        aria-label={`${props.label}日历`}
         popover="manual"
         tabIndex={-1}
         style={layer.style}
@@ -192,14 +195,14 @@ export function DatePicker(props: {
         <div className="cal-head">
           <h2 className="cal-title" aria-live="polite">
             <span key={view} data-dir={direction ?? undefined}>
-              {formatMonth(view)}
+              {formatMonth(view, locale)}
             </span>
           </h2>
           <div className="cal-nav">
             <button
               type="button"
               className="cal-step"
-              aria-label="Previous month"
+              aria-label="上个月"
               aria-disabled={previousBlocked ? true : undefined}
               onClick={() => {
                 if (!previousBlocked) goToMonth(previous);
@@ -210,7 +213,7 @@ export function DatePicker(props: {
             <button
               type="button"
               className="cal-step"
-              aria-label="Next month"
+              aria-label="下个月"
               aria-disabled={nextBlocked ? true : undefined}
               onClick={() => {
                 if (!nextBlocked) goToMonth(next);
@@ -220,7 +223,7 @@ export function DatePicker(props: {
             </button>
           </div>
         </div>
-        <div className="cal-grid" role="grid" aria-label={formatMonth(view)}>
+        <div className="cal-grid" role="grid" aria-label={formatMonth(view, locale)}>
           <div className="cal-row" role="row">
             {weekdays.map((name) => (
               <div key={name} className="cal-wd" role="columnheader" aria-label={name}>
@@ -242,7 +245,7 @@ export function DatePicker(props: {
                         data-selected={selected ? "" : undefined}
                         data-today={iso === today ? "" : undefined}
                         data-outside={sameMonth(iso, view) ? undefined : ""}
-                        aria-label={formatFull(iso)}
+                        aria-label={formatFull(iso, locale)}
                         aria-current={iso === today ? "date" : undefined}
                         tabIndex={iso === tabStop ? 0 : -1}
                         disabled={isOutOfRange(iso, min, max)}
@@ -270,7 +273,7 @@ export function DatePicker(props: {
                 layer.hide();
               }}
             >
-              Clear
+              清除
             </button>
           </div>
         ) : null}

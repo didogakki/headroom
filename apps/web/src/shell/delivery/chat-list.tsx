@@ -12,7 +12,7 @@ export function ChatList(props: {
   const group = useId();
   return (
     <fieldset className="dl-chats">
-      <legend className="sr">Chat</legend>
+      <legend className="sr">聊天</legend>
       {props.chats.map((chat) => (
         <label key={chat.id} className="dl-chat-row">
           <input

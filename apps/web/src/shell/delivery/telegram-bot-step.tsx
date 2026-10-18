@@ -53,7 +53,7 @@ export function TelegramBotStep(props: {
       <ol className="dl-howto">
         <li>
           <span className="dl-howto-row">
-            <span>Open @BotFather in Telegram.</span>
+            <span>在 Telegram 中打开 @BotFather。</span>
             <ButtonLink
               size="sm"
               href="https://t.me/BotFather"
@@ -61,15 +61,16 @@ export function TelegramBotStep(props: {
               rel="noreferrer noopener"
               icon={<ExternalIcon />}
             >
-              Open BotFather
+              打开 BotFather
             </ButtonLink>
           </span>
         </li>
-        <li>Send /newbot and follow the steps.</li>
-        <li>Paste the token it gives you.</li>
+        <li>发送 /newbot，并按提示操作。</li>
+        <li>粘贴它给你的令牌。</li>
       </ol>
       <PasswordField
-        label="Bot Token"
+        label="机器人令牌"
+        showLabel="显示令牌"
         value={token}
         error={shapeError}
         autoComplete="off"
@@ -85,19 +86,19 @@ export function TelegramBotStep(props: {
           type="submit"
           variant="primary"
           busy={busy}
-          busyLabel="Verifying"
+          busyLabel="正在验证"
           disabled={!shapeOk}
         >
-          Verify Token
+          验证令牌
         </Button>
         {props.keepName === null ? null : (
           <Button variant="quiet" disabled={busy} onClick={props.onKeep}>
-            {`Keep ${props.keepName}`}
+            {`保留 ${props.keepName}`}
           </Button>
         )}
         {props.onCancel === null ? null : (
           <Button variant="quiet" disabled={busy} onClick={props.onCancel}>
-            Cancel
+            取消
           </Button>
         )}
       </div>

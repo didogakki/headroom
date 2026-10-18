@@ -1,4 +1,4 @@
-import { currencyName, currencySymbol, minorDigits } from "@headroom/view-model/wallet-money";
+import { currencySymbol, minorDigits } from "@headroom/view-model/wallet-money";
 import {
   useId,
   useLayoutEffect,
@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { ChevronDownIcon } from "../icons.tsx";
+import { zhCurrencyName } from "../lib/zh.ts";
 import { ListboxPanel, useListbox } from "./listbox.tsx";
 import {
   caretAfter,
@@ -86,7 +87,7 @@ export function MoneyInput<C extends string>(props: {
       currencies.map((code) => ({
         value: code,
         label: code,
-        meta: currencyName(code),
+        meta: zhCurrencyName(code),
         icon: <span className="mi-sym">{currencySymbol(code)}</span>,
       })),
     [currencies],
@@ -151,7 +152,7 @@ export function MoneyInput<C extends string>(props: {
             ref={triggerRef}
             type="button"
             className="mi-currency"
-            aria-label={`${props.label} currency: ${currency}`}
+            aria-label={`${props.label}币种：${currency}`}
             {...box.triggerProps}
           >
             <span className="mi-code">{currency}</span>
@@ -167,7 +168,7 @@ export function MoneyInput<C extends string>(props: {
         <ListboxPanel
           box={box}
           panelRef={panelRef}
-          label={`${props.label} currency`}
+          label={`${props.label}币种`}
           className="fpop-money"
         />
       ) : null}

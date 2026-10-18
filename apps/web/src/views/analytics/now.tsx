@@ -8,8 +8,6 @@ import {
   type ReactNode,
 } from "react";
 
-import { shortDate } from "@headroom/view-model/time";
-
 import { cx } from "../../ui/cx.ts";
 import {
   AccountLabel,
@@ -25,7 +23,7 @@ import {
   ViewCard,
   type Line,
 } from "./common.tsx";
-import { hoursText } from "./format.ts";
+import { hoursText, shortDate } from "./format.ts";
 import type { AccountSeries, Series } from "./series.ts";
 import { slotCount } from "./series.ts";
 import "./now.css";
@@ -36,10 +34,10 @@ import "./now.css";
  * is too young to project, stay in the list muted and say why; they never count in the headline.
  */
 
-const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const dayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
 const blocks = 28;
 const block = 6 * hour;
-/** Room, in pixels, the widest day name ("Wed", 23px at 11px) and the "reset" word (3px in, 23px at 10px) take. */
+/** Room, in pixels, a day name ("周三", 22px at 11px) and the "重置" word (3px in, 20px at 10px) take. */
 const dayNamePx = 24;
 const resetWordPx = 27;
 
@@ -50,7 +48,7 @@ function blocksFor(px: number, cellsPx: number): number {
 
 const pad = (value: number): string => String(value).padStart(2, "0");
 
-/** "Thu 22:21"; a date once the weekday would be ambiguous (six days or more ahead): "Oct 24 01:17". */
+/** "周四 22:21"; a date once the weekday would be ambiguous (six days or more ahead): "10月24日 01:17". */
 function stampOf(at: number, now: number): string {
   const date = new Date(at);
   const clock = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -59,8 +57,8 @@ function stampOf(at: number, now: number): string {
 
 function untilText(at: number, now: number): string {
   const hours = (at - now) / hour;
-  if (hours >= 48) return `in ${Math.round(hours / 24)} days`;
-  return hours >= 1 ? `in ${Math.round(hours)} h` : "soon";
+  if (hours >= 48) return `${Math.round(hours / 24)}天后`;
+  return hours >= 1 ? `${Math.round(hours)}小时后` : "即将";
 }
 
 /** One account's forecast, from its main limit. */
@@ -93,11 +91,11 @@ function forecastOf(account: AccountSeries, now: number): Forecast {
     runsOut: noReading ? null : limit.runsOutAt,
     pace: noReading ? null : limit.pace,
     note: inactive
-      ? "Reconnect to forecast"
+      ? "重新连接后才能预测"
       : noReading
-        ? "No current reading"
+        ? "暂无当前读数"
         : projected === null
-          ? "Too early to forecast"
+          ? "时间尚早，暂无法预测"
           : null,
   };
 }
@@ -114,37 +112,33 @@ function attention(p: Forecast, q: Forecast): number {
 
 const lockedHours = (f: Forecast): number => (f.runsOut === null ? 0 : (f.end - f.runsOut) / hour);
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 function headlineOf(rows: readonly Forecast[], now: number): Line {
   const out = rows.filter((f) => ready(f) && f.runsOut !== null).toSorted(attention);
   const first = out[0];
   if (first === undefined || first.runsOut === null) {
     return {
-      big: "Nothing runs out before reset",
-      cap: "Every forecast account resets with room to spare",
+      big: "重置前不会有额度用尽",
+      cap: "所有参与预测的账户在重置时都还有余量",
     };
   }
   return {
-    big: `${plural(out.length, "account runs", "accounts run")} out before reset`,
-    cap: `${first.account.label} first, ${stampOf(first.runsOut, now)}, then locked ${hoursText(lockedHours(first))}`,
+    big: `${out.length}个账户将在重置前用尽`,
+    cap: `${first.account.label} 最先用尽，${stampOf(first.runsOut, now)}，随后锁定${hoursText(lockedHours(first))}`,
   };
 }
 
 /** The line a row shows in the headline while the pointer rests on it. */
 function rowCaption(f: Forecast, now: number): string {
   if (f.note !== null) return f.note;
-  return `${outcome(f, now)} · used ${Math.round(f.used)}%`;
+  return `${outcome(f, now)} · 已用${Math.round(f.used)}%`;
 }
 
 function outcome(f: Forecast, now: number): string {
   // Past six days the hour adds nothing to a row; the panel still gives the full time.
   if (f.runsOut !== null)
-    return `Runs out ${f.runsOut - now >= 6 * day ? shortDate(f.runsOut) : stampOf(f.runsOut, now)}`;
-  if (f.used >= 100) return "At the limit";
-  return `~${Math.round(f.projected ?? 0)}% at reset`;
+    return `将用尽 ${f.runsOut - now >= 6 * day ? shortDate(f.runsOut) : stampOf(f.runsOut, now)}`;
+  if (f.used >= 100) return "已达上限";
+  return `重置时约${Math.round(f.projected ?? 0)}%`;
 }
 
 interface TipApi {
@@ -252,20 +246,20 @@ function BurnSvg(props: {
         if (reading.at > mid) break;
         seen = reading.used;
       }
-      return { title, body: seen === null ? "No reading" : `Used ${Math.round(seen)}%` };
+      return { title, body: seen === null ? "无读数" : `已用${Math.round(seen)}%` };
     }
-    if (run !== null && mid >= run) return { title, body: "Locked" };
+    if (run !== null && mid >= run) return { title, body: "已锁定" };
     return {
       title,
-      body: `Projected ${Math.round((f.used * (mid - f.start)) / Math.max(1, now - f.start))}% used`,
+      body: `预计已用${Math.round((f.used * (mid - f.start)) / Math.max(1, now - f.start))}%`,
     };
   };
 
   const late = run !== null && x(run) > marginLeft + plotWidth * 0.8;
   const summary =
     run === null
-      ? `Used ${Math.round(f.used)}%. Projected ${Math.round(f.projected ?? 0)}% at reset ${stampOf(f.end, now)}.`
-      : `Used ${Math.round(f.used)}%. Runs out ${stampOf(run, now)}. Locked ${hoursText(lockedHours(f))} until reset.`;
+      ? `已用${Math.round(f.used)}%。预计 ${stampOf(f.end, now)} 重置时达到${Math.round(f.projected ?? 0)}%。`
+      : `已用${Math.round(f.used)}%。将于 ${stampOf(run, now)} 用尽，到重置前锁定${hoursText(lockedHours(f))}。`;
 
   return (
     <>
@@ -274,7 +268,7 @@ function BurnSvg(props: {
           width={width}
           height={height}
           role="img"
-          aria-label={`Burn-down of ${f.account.label}. ${summary}`}
+          aria-label={`${f.account.label} 的消耗曲线。${summary}`}
         >
           <defs>
             <pattern
@@ -356,7 +350,7 @@ function BurnSvg(props: {
               </Txt>
               {x(f.end) - x(run) > 110 ? (
                 <Txt x={(x(run) + x(f.end)) / 2} y={y(50) + 4} anchor="middle" tone="danger" halo>
-                  {`Locked ${hoursText(lockedHours(f))}`}
+                  {`锁定${hoursText(lockedHours(f))}`}
                 </Txt>
               ) : null}
             </>
@@ -366,17 +360,17 @@ function BurnSvg(props: {
               {shortDate(f.start)}
             </Txt>
           ) : null}
-          {/* "Reset Oct 16" is about 80 px wide at the right edge; drop "Now" before the two collide. */}
+          {/* "重置 10月16日" is about 80 px wide at the right edge; drop "现在" before the two collide. */}
           {marginLeft + plotWidth - x(now) > 104 ? (
             <Txt x={x(now)} y={height - 6} anchor="middle" tone="secondary">
-              Now
+              现在
             </Txt>
           ) : null}
           <Txt
             x={marginLeft + plotWidth}
             y={height - 6}
             anchor="end"
-          >{`Reset ${shortDate(f.end)}`}</Txt>
+          >{`重置 ${shortDate(f.end)}`}</Txt>
           {columns.map(({ from, to }) => (
             <rect
               key={from}
@@ -406,25 +400,25 @@ function BurnDown(props: { readonly forecast: Forecast; readonly now: number }) 
       <Legend>
         <span>
           <Swatch kind="line" />
-          Used
+          已用
         </span>
         <span>
           <Swatch kind="dash" />
-          Current pace
+          当前速度
         </span>
         <span>
           <i className="now-sw" data-kind="even" aria-hidden="true" />
-          Even pace
+          均匀速度
         </span>
         {run === null ? null : (
           <>
             <span>
               <Swatch kind="dot" />
-              Runs out
+              将用尽
             </span>
             <span>
               <i className="now-sw" data-kind="hatch" aria-hidden="true" />
-              Locked until reset
+              锁定至重置
             </span>
           </>
         )}
@@ -434,18 +428,18 @@ function BurnDown(props: { readonly forecast: Forecast; readonly now: number }) 
 }
 
 function factsOf(f: Forecast, now: number): readonly (readonly [string, string])[] {
-  const pace = `${(f.pace ?? 0).toFixed(1)}x even`;
+  const pace = `${(f.pace ?? 0).toFixed(1)}x 均速`;
   if (f.runsOut !== null) {
     return [
-      ["Pace", pace],
-      ["Runs out", stampOf(f.runsOut, now)],
-      ["Locked before reset", hoursText(lockedHours(f))],
+      ["速度", pace],
+      ["用尽时间", stampOf(f.runsOut, now)],
+      ["重置前锁定", hoursText(lockedHours(f))],
     ];
   }
   return [
-    ["Pace", pace],
-    ["At reset", `~${Math.round(f.projected ?? 0)}% used`],
-    ["Resets", untilText(f.end, now)],
+    ["速度", pace],
+    ["重置时", `已用约${Math.round(f.projected ?? 0)}%`],
+    ["重置", untilText(f.end, now)],
   ];
 }
 
@@ -470,7 +464,7 @@ function AccountHead(props: { readonly forecast: Forecast }) {
     <div className="now-head">
       <AccountLabel account={account} strong sub={`${plan} · ${story.name}`} />
       <p className="now-sub">
-        {`Used ${Math.round(props.forecast.used)}% in ${Math.round(props.forecast.elapsed * 100)}% of the window`}
+        {`已用${Math.round(props.forecast.used)}%，窗口已过${Math.round(props.forecast.elapsed * 100)}%`}
       </p>
     </div>
   );
@@ -519,7 +513,7 @@ function RecentSvg(props: {
       locked: slots > 0 && locked === slots,
       // A partial day is judged against the share of a day's allowance that has elapsed.
       share: isToday ? Math.min(1, Math.max(0.05, (series.now - start) / day)) : 1,
-      label: isToday ? "Today" : (dayNames[new Date(start).getDay()] ?? ""),
+      label: isToday ? "今天" : (dayNames[new Date(start).getDay()] ?? ""),
     };
   });
   const left = Math.max(0, 100 - f.used);
@@ -540,7 +534,7 @@ function RecentSvg(props: {
           width={width}
           height={height}
           role="img"
-          aria-label={`Recent pace of ${account.label}, last seven days. ${atLimit ? "Limit reached" : `Allowed ${allowed.toFixed(1)} pp a day`}.`}
+          aria-label={`${account.label} 的近期速度，最近七天。${atLimit ? "已达上限" : `每天允许${allowed.toFixed(1)}百分点`}。`}
         >
           <line className="now-grid-line" x1={0} x2={width} y1={base} y2={base} />
           {days.map((d, i) => {
@@ -548,10 +542,10 @@ function RecentSvg(props: {
             const barHeight = d.value === null ? 0 : Math.max(1, base - y(d.value));
             const over = d.value !== null && d.value > allowed * d.share;
             const body = d.locked
-              ? "Locked, use unknown"
+              ? "已锁定，用量未知"
               : d.value === null
-                ? "No readings"
-                : `${d.value.toFixed(1)} pp used${atLimit ? ". Limit reached" : `. Allowed ${allowed.toFixed(1)} pp a day`}`;
+                ? "无读数"
+                : `已用${d.value.toFixed(1)}百分点${atLimit ? "。已达上限" : `。每天允许${allowed.toFixed(1)}百分点`}`;
             return (
               <g key={d.at}>
                 <Txt x={mid} y={height - 5} anchor="middle" size={10}>
@@ -620,12 +614,12 @@ function RecentSvg(props: {
 function RecentPace(props: { readonly forecast: Forecast; readonly series: Series }) {
   const caption =
     props.forecast.used >= 100
-      ? "Limit reached"
-      : `Allowed: ${allowedPerDay(props.forecast, props.series.now).toFixed(1)} pp a day`;
+      ? "已达上限"
+      : `每天允许：${allowedPerDay(props.forecast, props.series.now).toFixed(1)}百分点`;
   return (
     <div className="now-recent">
       <p className="now-sec">
-        <b>Recent pace</b> · pp used per day
+        <b>近期速度</b> · 每天已用百分点
       </p>
       <p className="now-sub">{caption}</p>
       <Plot>
@@ -634,15 +628,15 @@ function RecentPace(props: { readonly forecast: Forecast; readonly series: Serie
       <Legend>
         <span>
           <i className="now-sw" data-kind="bar" aria-hidden="true" />
-          Within allowance
+          未超出额度
         </span>
         <span>
           <i className="now-sw" data-kind="over" aria-hidden="true" />
-          Over
+          超出
         </span>
         <span>
           <i className="now-sw" data-kind="allowed" aria-hidden="true" />
-          Allowed per day
+          每天允许量
         </span>
       </Legend>
     </div>
@@ -695,7 +689,7 @@ function ForecastView(props: {
                   <span />
                   <span className="now-axis-days" ref={axis}>
                     <span className="now-now-label" style={{ left: `${nowAt * 100}%` }}>
-                      Now
+                      现在
                     </span>
                     {headers.map((h) => (
                       <span
@@ -743,35 +737,35 @@ function ForecastView(props: {
         </Plot>
         <Legend>
           <span>
-            Projected use
+            预计用量
             <i className="now-cell now-sw-cell" data-level="0" />
             <i className="now-cell now-sw-cell" data-level="1" />
             <i className="now-cell now-sw-cell" data-level="2" />
             <i className="now-cell now-sw-cell" data-level="3" />
-            under 25, 50, 75, 100%
+            分别低于25%、50%、75%、100%
           </span>
           <span>
             <i className="now-cell now-sw-cell" data-kind="out" />
-            Runs out
+            将用尽
           </span>
           <span>
             <i className="now-sw" data-kind="hatch" aria-hidden="true" />
-            Locked until reset
+            锁定至重置
           </span>
           <span>
             <i className="now-sw" data-kind="tick" aria-hidden="true" />
-            Reset
+            重置
           </span>
           <span>
             <i className="now-cell now-sw-cell" data-kind="new" />
-            New window, no forecast
+            新窗口，无预测
           </span>
-          <span>Assumes the pace holds. Select a row for detail.</span>
+          <span>假设当前速度保持不变。选择一行查看详情。</span>
         </Legend>
       </div>
-      <aside className="an2-panel" aria-label="Selected account">
+      <aside className="an2-panel" aria-label="所选账户">
         {props.selected === undefined ? (
-          <p className="now-sub">No forecast yet.</p>
+          <p className="now-sub">暂无预测。</p>
         ) : (
           <>
             <AccountHead forecast={props.selected} />
@@ -807,27 +801,27 @@ function ForecastRow(props: {
   const gutterB = !usable
     ? ""
     : f.end >= horizon
-      ? `Resets ${shortDate(f.end)} →`
-      : `Resets ${stampOf(f.end, now)}`;
+      ? `重置 ${shortDate(f.end)} →`
+      : `重置 ${stampOf(f.end, now)}`;
   const info = (j: number): { readonly title: string; readonly body: string } => {
     const from = base + j * block;
     const to = from + block;
     const range = `${dayNames[new Date(from).getDay()] ?? ""} ${pad(new Date(from).getHours())}:00-${pad(new Date(to).getHours())}:00`;
     const title = `${label} · ${range}`;
-    if (!usable) return { title, body: `${f.note ?? ""}.` };
+    if (!usable) return { title, body: `${f.note ?? ""}。` };
     if (from >= f.end)
-      return { title, body: `New window after reset ${stampOf(f.end, now)}. Not forecast.` };
+      return { title, body: `${stampOf(f.end, now)} 重置后进入新窗口，不做预测。` };
     if (f.runsOut !== null && to > f.runsOut) {
       return from <= f.runsOut
         ? {
             title,
-            body: `Runs out ${stampOf(f.runsOut, now)}. Locked ${hoursText(lockedHours(f))} before reset.`,
+            body: `将于 ${stampOf(f.runsOut, now)} 用尽，重置前锁定${hoursText(lockedHours(f))}。`,
           }
-        : { title, body: `Locked until reset ${stampOf(f.end, now)}` };
+        : { title, body: `锁定至 ${stampOf(f.end, now)} 重置` };
     }
     return {
       title,
-      body: `Projected ${Math.round(projectedAt(j))}% used by block end`,
+      body: `预计到该时段结束已用${Math.round(projectedAt(j))}%`,
     };
   };
   const projectedAt = (j: number): number => {
@@ -860,7 +854,7 @@ function ForecastRow(props: {
       data-muted={!usable || undefined}
       disabled={!usable}
       aria-pressed={usable ? props.on : undefined}
-      aria-label={`${label}. ${rowCaption(f, now)}`}
+      aria-label={`${label}。${rowCaption(f, now)}`}
       onClick={() => props.onSelect(f.account.id)}
       onPointerMove={onMove}
       onPointerLeave={props.clear}
@@ -898,7 +892,7 @@ function ForecastRow(props: {
               data-level={level}
               data-day={new Date(from).getHours() === 0 || undefined}
             >
-              {firstAfter ? <em>reset</em> : null}
+              {firstAfter ? <em>重置</em> : null}
             </i>
           );
         })}
@@ -940,19 +934,19 @@ const columns: readonly {
 }[] = [
   {
     key: "account",
-    title: "Account",
+    title: "账户",
     first: 1,
     compare: (p, q) => p.account.label.localeCompare(q.account.label),
   },
-  { key: "used", title: "Used", first: -1, compare: (p, q) => p.used - q.used },
+  { key: "used", title: "已用", first: -1, compare: (p, q) => p.used - q.used },
   {
     key: "pace",
-    title: "Pace",
+    title: "速度",
     first: -1,
     compare: (p, q) => (p.projected ?? 0) - (q.projected ?? 0),
   },
-  { key: "risk", title: "Runs out / at reset", first: 1, compare: attention },
-  { key: "resets", title: "Resets", first: 1, compare: (p, q) => p.end - q.end },
+  { key: "risk", title: "用尽 / 重置时", first: 1, compare: attention },
+  { key: "resets", title: "重置", first: 1, compare: (p, q) => p.end - q.end },
 ];
 
 function Caret(props: { readonly up: boolean }) {
@@ -1050,7 +1044,7 @@ function TableView(props: {
                       onPointerEnter={() =>
                         props.lit({
                           big: f.account.label,
-                          cap: `${rowCaption(f, now)}${usableRow ? ` · ${pace.toFixed(1)}x even pace` : ""}`,
+                          cap: `${rowCaption(f, now)}${usableRow ? ` · ${pace.toFixed(1)}x 均速` : ""}`,
                         })
                       }
                       onPointerLeave={props.clear}
@@ -1065,14 +1059,14 @@ function TableView(props: {
                     <span
                       className="now-meter"
                       role="img"
-                      aria-label={`Used ${Math.round(f.used)}% in ${Math.round(f.elapsed * 100)}% of the window`}
+                      aria-label={`已用${Math.round(f.used)}%，窗口已过${Math.round(f.elapsed * 100)}%`}
                     >
                       <i style={{ width: `${Math.min(100, f.used)}%` }} />
                       <b style={{ left: `${f.elapsed * 100}%` }} />
                     </span>
                   </td>
                   <td className={cx("now-pace", usableRow && pace > 1.1 && "warn")}>
-                    {usableRow ? `${pace.toFixed(1)}x` : "Unknown"}
+                    {usableRow ? `${pace.toFixed(1)}x` : "未知"}
                   </td>
                   <td>
                     {!usableRow ? (
@@ -1084,7 +1078,7 @@ function TableView(props: {
                       </span>
                     ) : (
                       <span className="now-quiet">
-                        {f.used >= 100 ? "At the limit" : `~${Math.round(f.projected ?? 0)}%`}
+                        {f.used >= 100 ? "已达上限" : `~${Math.round(f.projected ?? 0)}%`}
                       </span>
                     )}
                   </td>
@@ -1098,18 +1092,18 @@ function TableView(props: {
       <Legend>
         <span>
           <Swatch kind="dot" />
-          Runs out before reset
+          重置前用尽
         </span>
         <span className="now-wide">
           <span className="now-meter" data-mini aria-hidden="true">
             <b style={{ left: "50%" }} />
           </span>
-          Tick: even pace
+          刻度线：均速
         </span>
         <span className="now-wide">
-          <b className="now-warn-text">1.2x</b>Faster than even pace
+          <b className="now-warn-text">1.2x</b>快于均速
         </span>
-        <span>Select a header to sort, a row for detail.</span>
+        <span>选择表头可排序，选择一行查看详情。</span>
       </Legend>
       {props.selected === undefined ? null : (
         <div className="now-detail">
@@ -1146,10 +1140,10 @@ export function RightNowCard(props: { readonly series: Series }) {
   };
   return (
     <ViewCard
-      title="Right Now"
+      title="此刻"
       views={[
-        { value: "forecast", label: "Forecast" },
-        { value: "table", label: "Table" },
+        { value: "forecast", label: "预测" },
+        { value: "table", label: "表格" },
       ]}
       view={view}
       onView={setView}

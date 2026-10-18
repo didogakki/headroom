@@ -18,37 +18,37 @@ export function AccountMenu(props: {
   const prefs = useDevicePrefs();
   return (
     <Menu
-      label="Account Menu"
+      label="账户菜单"
       trigger={<Avatar seed={props.name} />}
       triggerClassName="avatar"
       openOnHover
     >
-      <MenuWho lead="Signed in as" name={props.name} face={<Avatar seed={props.name} />} />
+      <MenuWho lead="已登录为" name={props.name} face={<Avatar seed={props.name} />} />
       <MenuBlock>
         <Segmented
           full
-          label="Appearance"
+          label="外观"
           value={prefs.appearance}
           onChange={(appearance) => prefs.setAppearance(appearance)}
           options={[
-            { value: "system", label: "System" },
-            { value: "light", label: "Light" },
-            { value: "dark", label: "Dark" },
+            { value: "system", label: "跟随系统" },
+            { value: "light", label: "浅色" },
+            { value: "dark", label: "深色" },
           ]}
         />
       </MenuBlock>
       <MenuSeparator />
       <MenuItem icon={<GearIcon />} onSelect={props.onSettings}>
-        Settings
+        设置
       </MenuItem>
       {isDemoSite ? null : (
         <>
           <MenuItem icon={<UserIcon />} onSelect={props.onAccount}>
-            Account
+            账户
           </MenuItem>
           <MenuSeparator />
           <MenuItem icon={<SignOutIcon />} danger onSelect={() => void authClient.signOut()}>
-            Sign Out
+            退出登录
           </MenuItem>
         </>
       )}

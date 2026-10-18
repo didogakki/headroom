@@ -3,6 +3,7 @@ import { providers } from "@headroom/core/contracts";
 
 import { api, demoRefusal, isDemoRefusal } from "../api.ts";
 import { defaultSettings } from "../lib/settings-store.ts";
+import { zhMessage } from "../lib/zh.ts";
 import { handleDemoRequest, resetDemoApi } from "./api.ts";
 import { isEmbedded, parseSiteMessage } from "./embed.ts";
 import { codeOf, botCheckProblem, saveProblem, testProblem } from "../shell/delivery/status.ts";
@@ -119,9 +120,9 @@ describe("demo site delivery errors", () => {
         includeIdentity: false,
       }),
     );
-    expect(botCheckProblem(check)).toBe(demoRefusal);
-    expect(testProblem("webhook", verify)).toBe(demoRefusal);
-    expect(saveProblem(create)).toBe(demoRefusal);
+    expect(botCheckProblem(check)).toBe(zhMessage(demoRefusal));
+    expect(testProblem("webhook", verify)).toBe(zhMessage(demoRefusal));
+    expect(saveProblem(create)).toBe(zhMessage(demoRefusal));
   });
 });
 

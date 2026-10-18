@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { api, demoRefusal, isDemoRefusal } from "../api.ts";
 import { AlertIcon, CheckIcon, PencilIcon } from "../icons.tsx";
+import { zhMessage } from "../lib/zh.ts";
 
 const maxName = 40;
 const savedMs = 1600;
@@ -81,7 +82,7 @@ export function AccountTitle(props: {
           <input
             ref={input}
             className="name-edit"
-            aria-label="Account name"
+            aria-label="账户名称"
             maxLength={maxName}
             value={draft}
             style={{ width: `${Math.max(6, draft.length + 2)}ch` }}
@@ -104,18 +105,18 @@ export function AccountTitle(props: {
           </span>
         )}
         {editing ? null : (
-          <button className="rename" type="button" aria-label="Rename this account" onClick={start}>
+          <button className="rename" type="button" aria-label="重命名此账户" onClick={start}>
             <PencilIcon />
           </button>
         )}
         {saved ? (
           <output className="saved">
-            <CheckIcon /> Saved
+            <CheckIcon /> 已保存
           </output>
         ) : null}
         {refused ? (
-          <output className="saved refused" title={demoRefusal}>
-            <AlertIcon /> Demo Mode
+          <output className="saved refused" title={zhMessage(demoRefusal)}>
+            <AlertIcon /> 演示模式
           </output>
         ) : null}
       </h3>

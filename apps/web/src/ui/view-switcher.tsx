@@ -43,7 +43,7 @@ export function ViewSwitcher(props: { readonly active: ViewId }) {
   }, [props.active]);
 
   return (
-    <nav ref={root} className="seg view-switch" aria-label="View">
+    <nav ref={root} className="seg view-switch" aria-label="视图">
       {pill === null ? null : (
         <span
           className="view-pill"

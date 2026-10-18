@@ -6,13 +6,9 @@ import { useDevicePrefs } from "../../lib/device-prefs.ts";
 import { useExchangeRates } from "../../lib/exchange-rates.ts";
 import { useNow } from "../../lib/now.ts";
 import { useWallet } from "../../lib/wallet-store.ts";
+import { zhCurrencyName } from "../../lib/zh.ts";
 import { localDay } from "@headroom/view-model/wallet-dates";
-import {
-  currencies,
-  currencyName,
-  currencySymbol,
-  type Currency,
-} from "@headroom/view-model/wallet-money";
+import { currencies, currencySymbol, type Currency } from "@headroom/view-model/wallet-money";
 import { demoWallet } from "@headroom/view-model/wallet-demo";
 import { summarize, type TopUp } from "@headroom/view-model/wallet";
 import { Button } from "../../ui/button.tsx";
@@ -28,11 +24,11 @@ import { TopUpDialog } from "./topup-dialog.tsx";
 import { TopUpsSection } from "./topups.tsx";
 import "./wallet.css";
 
-/** "INR" with "₹ · Indian rupee" beside it. */
+/** "INR" with "₹ · 印度卢比" beside it. */
 const currencyOptions: readonly SelectOption<Currency>[] = currencies.map((currency) => ({
   value: currency,
   label: currency,
-  meta: `${currencySymbol(currency)} · ${currencyName(currency)}`,
+  meta: `${currencySymbol(currency)} · ${zhCurrencyName(currency)}`,
 }));
 
 /**
@@ -110,10 +106,10 @@ export function WalletPage(props: ViewProps) {
     <div className="reveal w-page">
       {stale ? <LoadFailed stale busy={retrying} onRetry={retry} /> : null}
       <div className="w-tools">
-        <h1 className="w-title">Wallet</h1>
+        <h1 className="w-title">钱包</h1>
         <div className="w-segs">
           <Select
-            label="Currency"
+            label="币种"
             hideLabel
             size="sm"
             value={display}
@@ -126,7 +122,7 @@ export function WalletPage(props: ViewProps) {
             icon={<PlusIcon />}
             onClick={() => setTopUpFor({ connectionId: null, editing: null })}
           >
-            Add Top-Up
+            添加充值
           </Button>
         </div>
       </div>

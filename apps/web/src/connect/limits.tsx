@@ -4,6 +4,7 @@ import { useSettings } from "../lib/settings.tsx";
 import { displayMeter } from "@headroom/view-model/tone";
 import { ResetCaption } from "../lib/reset-caption.tsx";
 import { When } from "../lib/when.tsx";
+import { zhLabel, zhShort, zhUnit } from "../lib/zh.ts";
 import { Bar } from "../ui/bar.tsx";
 import { cx } from "../ui/cx.ts";
 
@@ -13,10 +14,9 @@ type Balance = NonNullable<ReturnType<typeof presentPanel>["balance"]>;
 function balanceText(balance: Balance): string {
   const { value, unit } = balance;
   const decimals = Number.isInteger(value) ? 0 : 2;
-  if (unit === "usd") return `${formatUsd(value)} left`;
-  if (unit === "credits")
-    return `${formatNumber(value, decimals)} ${value === 1 ? "credit" : "credits"} left`;
-  return `${formatNumber(value, decimals)} left`;
+  if (unit === "usd") return `剩余 ${formatUsd(value)}`;
+  if (unit === "credits") return `剩余 ${formatNumber(value, decimals)} 积分`;
+  return `剩余 ${formatNumber(value, decimals)}`;
 }
 
 function meterDecimals(provider: OverviewConnection["provider"], used: number): number {
@@ -33,10 +33,10 @@ export function LimitsCell(props: { readonly connection: OverviewConnection }) {
   const observed = connection.snapshot?.observedAt ?? connection.lastSuccessAt;
   const lastKnown =
     observed === null ? (
-      "No data yet"
+      "暂无数据"
     ) : (
       <>
-        <When at={observed} kind="ago" prefix="Last known" />
+        <When at={observed} kind="ago" prefix="最后已知：" />
       </>
     );
 
@@ -49,7 +49,7 @@ export function LimitsCell(props: { readonly connection: OverviewConnection }) {
       meterDecimals(connection.provider, used),
     );
     const tone = dim ? "neutral" : (meter.tone ?? "neutral");
-    const words = meter.unit === "% left" ? "% left" : "% used";
+    const words = zhUnit(meter.unit);
     return (
       <td className={cx("troom", dim && "dim")}>
         <span className="rtop">
@@ -57,14 +57,14 @@ export function LimitsCell(props: { readonly connection: OverviewConnection }) {
             {meter.value}
             {words}
           </span>
-          <span className="rwin">{label}</span>
+          <span className="rwin">{zhShort(label)}</span>
         </span>
         <Bar
           thin
           percent={meter.fill ?? 0}
           tone={tone}
           valueNow={used}
-          label={`${label} ${used}% used`}
+          label={`${zhShort(label)} 已用 ${used}%`}
         />
         <span className="rsub">
           {dim ? lastKnown : <ResetCaption resetWords={resetWords} resetsAt={resetsAt} />}
@@ -78,9 +78,9 @@ export function LimitsCell(props: { readonly connection: OverviewConnection }) {
       <td className={cx("troom", dim && "dim")}>
         <span className="rtop">
           <span className="rnum">{balanceText(panel.balance)}</span>
-          <span className="rwin">{panel.balance.label}</span>
+          <span className="rwin">{zhLabel(panel.balance.label)}</span>
         </span>
-        <span className="rsub">{dim ? lastKnown : "No reset"}</span>
+        <span className="rsub">{dim ? lastKnown : "无重置"}</span>
       </td>
     );
   }
@@ -88,9 +88,9 @@ export function LimitsCell(props: { readonly connection: OverviewConnection }) {
   return (
     <td className="troom dim">
       <span className="rtop">
-        <span className="rnum">No limits reported</span>
+        <span className="rnum">未报告额度</span>
       </span>
-      <span className="rsub">{dim ? lastKnown : "Waiting for the first refresh"}</span>
+      <span className="rsub">{dim ? lastKnown : "等待首次刷新"}</span>
     </td>
   );
 }

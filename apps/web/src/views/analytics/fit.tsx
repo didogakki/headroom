@@ -1,4 +1,3 @@
-import { shortDate } from "@headroom/view-model/time";
 import { useRef, useState, type PointerEvent, type ReactNode, type RefObject } from "react";
 
 import { BrandMark } from "../../icons.tsx";
@@ -17,7 +16,7 @@ import {
   useWidth,
   ViewCard,
 } from "./common.tsx";
-import { dollars } from "./format.ts";
+import { dollars, shortDate } from "./format.ts";
 import { hourOfWeek, usedAt, type AccountSeries, type Series } from "./series.ts";
 import "./fit.css";
 
@@ -29,8 +28,8 @@ import "./fit.css";
 
 type View = "actions" | "history";
 const views = [
-  { value: "history", label: "History" },
-  { value: "actions", label: "Actions" },
+  { value: "history", label: "历史" },
+  { value: "actions", label: "建议" },
 ] as const;
 
 /** Verdict thresholds. */
@@ -52,31 +51,34 @@ const MIN_WINDOWS = 2;
 
 const spanMs = 90 * 24 * hour;
 const monthNames = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "1月",
+  "2月",
+  "3月",
+  "4月",
+  "5月",
+  "6月",
+  "7月",
+  "8月",
+  "9月",
+  "10月",
+  "11月",
+  "12月",
 ] as const;
 
 const verdicts = [
-  { glyph: "↑", word: "Too small" },
-  { glyph: "✓", word: "Fits" },
-  { glyph: "↓", word: "Room to spare" },
-  { glyph: "·", word: "Not enough history yet" },
+  { glyph: "↑", word: "偏小" },
+  { glyph: "✓", word: "合适" },
+  { glyph: "↓", word: "有富余" },
+  { glyph: "·", word: "历史不足" },
 ] as const;
 type VerdictIndex = 0 | 1 | 2 | 3;
 
-function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
-}
+/** How a history's unit reads in a sentence: counted, per unit, and for the one running now. */
+const unitWords = {
+  week: { count: "周", per: "每周", current: "本周" },
+  month: { count: "个月", per: "每个月", current: "本月" },
+  window: { count: "个窗口", per: "每个窗口", current: "当前窗口" },
+} as const;
 
 function money(value: number): string {
   return dollars(Math.round(value));
@@ -185,14 +187,15 @@ function Tile(props: {
 }
 
 function observation(history: History): string {
-  const { hits, cells, unit, average, highest, locked } = history;
+  const { hits, cells, average, highest, locked } = history;
+  const unit = unitWords[history.unit].count;
   if (history.verdict === 0) {
-    return `Hit the limit in ${hits} of ${cells.length} ${unit}s. A bigger plan would have avoided ~${locked} locked hours.`;
+    return `${cells.length}${unit}中有${hits}${unit}触达上限。更大的套餐本可避免约${locked}小时的锁定。`;
   }
   if (history.verdict === 2) {
-    return `Peaks averaged ${average}%. Highest: ${highest}%. A smaller plan could cover this, if one exists.`;
+    return `峰值平均${average}%，最高${highest}%。若有更小的套餐，应该也够用。`;
   }
-  return `Peaks averaged ${average}%. Hit the limit in ${hits} of ${cells.length} ${unit}s. The size fits.`;
+  return `峰值平均${average}%。${cells.length}${unit}中有${hits}${unit}触达上限。套餐大小合适。`;
 }
 
 /** Peak per window as columns: danger where it hit the limit, a dashed average, the limit line, the current window outlined. */
@@ -233,11 +236,11 @@ function PeakColumns(props: {
         <svg
           width={width}
           height={base + bottom}
-          aria-label={`Peak per ${unit} for ${history.account.label}`}
+          aria-label={`${history.account.label} ${unitWords[unit].per}的峰值`}
         >
           <line className="fit-limit" x1={0} x2={plotWidth} y1={y(100)} y2={y(100)} />
           <text className="fit-t" x={plotWidth + 6} y={y(100) + 4}>
-            Limit
+            上限
           </text>
           <line className="fit-base" x1={0} x2={plotWidth} y1={base} y2={base} />
           {columns.map((column, index) => {
@@ -275,11 +278,11 @@ function PeakColumns(props: {
                     tip.show(
                       event,
                       column.current
-                        ? `This ${unit}`
-                        : `${shortDate(column.start)} to ${shortDate(column.end - 24 * hour)}`,
+                        ? unitWords[unit].current
+                        : `${shortDate(column.start)} 至 ${shortDate(column.end - 24 * hour)}`,
                       column.current
-                        ? `${shortDate(column.start)} to now, ${column.peak}% used`
-                        : `Peak ${column.peak}%${column.hit ? `, locked ${Math.round(column.hours)} h` : ", never locked"}`,
+                        ? `${shortDate(column.start)} 至现在，已用${column.peak}%`
+                        : `峰值${column.peak}%${column.hit ? `，锁定${Math.round(column.hours)}小时` : "，从未锁定"}`,
                     )
                   }
                   onPointerLeave={tip.hide}
@@ -295,7 +298,7 @@ function PeakColumns(props: {
             y2={y(history.average)}
           />
           <text className="fit-t strong" x={plotWidth + 6} y={averageLabel}>
-            Average {history.average}%
+            平均 {history.average}%
           </text>
           <text className="fit-t small" x={0} y={base + 15}>
             {shortDate(columns[0]?.start ?? now)}
@@ -306,7 +309,7 @@ function PeakColumns(props: {
             y={base + 15}
             textAnchor="middle"
           >
-            now
+            现在
           </text>
         </svg>
       ) : null}
@@ -332,50 +335,48 @@ function HistoryPanel(props: {
         <BrandMark provider={history.account.story.provider} size={24} />
         <div className="fit-id">
           <FullName className="fit-id-name" name={history.account.label} />
-          <span>
-            {cost === null ? history.account.story.priceNote : `${dollars(cost)} a month`}
-          </span>
+          <span>{cost === null ? history.account.story.priceNote : `${dollars(cost)} / 月`}</span>
         </div>
         <Verdict verdict={history.verdict} />
       </div>
       <div className="fit-tiles">
-        <Tile label="Average peak" value={`${history.average}%`} />
+        <Tile label="平均峰值" value={`${history.average}%`} />
         <Tile
-          label="At the limit"
+          label="触达上限"
           value={String(history.hits)}
-          small={`of ${history.cells.length} ${unit}s`}
+          small={`共${history.cells.length}${unitWords[unit].count}`}
         />
         <Tile
-          label="Locked"
-          value={history.locked > 0 ? `${history.locked} h` : "None"}
-          small="in 90 days"
+          label="锁定"
+          value={history.locked > 0 ? `${history.locked}小时` : "无"}
+          small="90天内"
         />
         {history.unused === null ? (
-          <Tile label="Unused" value="Unknown" small="no price set" />
+          <Tile label="未用" value="未知" small="未设置价格" />
         ) : (
-          <Tile label="Unused" value={`~${money(history.unused)}`} small="a month, estimate" />
+          <Tile label="未用" value={`~${money(history.unused)}`} small="每月，估算" />
         )}
       </div>
       <p className="fit-sec">
-        <b>Peak per {unit}</b> · last 90 days
+        <b>{unitWords[unit].per}的峰值</b> · 最近90天
       </p>
       <PeakColumns history={history} now={props.now} width={width} />
       <Legend>
         <span>
           <Swatch kind="ramp" level={2} />
-          Peak
+          峰值
         </span>
         <span>
           <i className="fit-sw-hit" aria-hidden="true" />
-          Hit the limit
+          触达上限
         </span>
         <span>
           <i className="fit-sw-now" aria-hidden="true" />
-          Now
+          现在
         </span>
         <span>
           <Swatch kind="dash" />
-          Average
+          平均
         </span>
       </Legend>
       <p className="fit-obs">{observation(history)}</p>
@@ -445,14 +446,15 @@ function HistoryGrid(props: {
         const nowWidth = Math.max(2, x(props.now) - x(nowStart) - 1);
         const level = Math.round(limit.used);
         const fillShare = Math.max(0.03, (level / 100) * cellShare);
-        const sub = `${level}% used`;
+        const sub = `已用${level}%`;
+        const current = unitWords[history.unit].current;
         return (
           <button
             key={account.id}
             type="button"
             className="fit-row"
             aria-pressed={props.selected === account.id}
-            aria-label={`${account.label}: ${verdicts[history.verdict].word}. Show details`}
+            aria-label={`${account.label}：${verdicts[history.verdict].word}。查看详情`}
             onClick={() => props.onSelect(account.id)}
             onPointerEnter={() => props.onHover(summaryLine(history))}
             onPointerLeave={() => props.onHover(null)}
@@ -467,8 +469,8 @@ function HistoryGrid(props: {
                   {history.cells.map((cell) => {
                     const xa = x(Math.max(cell.start, from)) + 1;
                     const xb = x(Math.min(cell.end, props.now)) - 1;
-                    const title = `${account.label} · ${history.unit} of ${shortDate(cell.start)}`;
-                    const body = `Peak ${cell.peak}%${cell.hit ? `, locked ${Math.round(cell.hours)} h` : ""}`;
+                    const title = `${account.label} · 始于${shortDate(cell.start)}的窗口`;
+                    const body = `峰值${cell.peak}%${cell.hit ? `，锁定${Math.round(cell.hours)}小时` : ""}`;
                     return (
                       <rect
                         key={cell.start}
@@ -490,9 +492,9 @@ function HistoryGrid(props: {
                   })}
                   <g
                     onPointerMove={(event) => {
-                      tip.show(event, `${account.label} · current ${history.unit}`, sub);
+                      tip.show(event, `${account.label} · ${current}`, sub);
                       props.onHover({
-                        big: `${account.label} · current ${history.unit} since ${shortDate(limit.start)}`,
+                        big: `${account.label} · ${current}，始于${shortDate(limit.start)}`,
                         cap: sub,
                       });
                     }}
@@ -530,23 +532,23 @@ function HistoryGrid(props: {
 
 function summaryLine(history: History): { readonly big: string; readonly cap: string } {
   const label = history.account.label;
-  const unit = history.unit;
+  const unit = unitWords[history.unit].count;
   if (history.verdict === 3) {
     return {
-      big: `${label}: not enough history yet`,
-      cap: `Needs ${MIN_WINDOWS} complete ${unit}s to judge the plan`,
+      big: `${label}：历史记录不足`,
+      cap: `至少需要${MIN_WINDOWS}个完整窗口才能判断套餐`,
     };
   }
   const unused =
     history.unused === null
-      ? history.account.story.priceNote.toLowerCase()
-      : `~${money(history.unused)} of ${dollars(history.account.story.monthlyCost ?? 0)} a month unused (est.)`;
+      ? history.account.story.priceNote
+      : `每月${dollars(history.account.story.monthlyCost ?? 0)}中约${money(history.unused)}未使用（估算）`;
   return {
     big:
       history.hits > 0
-        ? `${label} hit the limit in ${history.hits} of ${history.cells.length} ${unit}s`
-        : `${label} never hit the limit in ${history.cells.length} ${unit}s`,
-    cap: `Average peak ${history.average}%, locked ${history.locked} h, ${unused}`,
+        ? `${label} 在${history.cells.length}${unit}中有${history.hits}${unit}触达上限`
+        : `${label} 在${history.cells.length}${unit}中从未触达上限`,
+    cap: `平均峰值${history.average}%，锁定${history.locked}小时，${unused}`,
   };
 }
 
@@ -567,18 +569,18 @@ function HistoryView(props: {
   const judged = props.rows.some((row) => row.verdict !== 3);
   const base = !judged
     ? {
-        big: "Not enough history yet",
-        cap: `Plan Fit needs ${MIN_WINDOWS} complete windows of an account`,
+        big: "历史记录不足",
+        cap: `套餐适配需要某个账户至少有${MIN_WINDOWS}个完整窗口`,
       }
     : {
-        big: `${plural(small, "plan")} ${small === 1 ? "is" : "are"} too small, ${room} ${room === 1 ? "has" : "have"} room to spare`,
+        big: `${small}个套餐偏小，${room}个有富余`,
         cap:
           worst === undefined || worst.hits === 0
-            ? "No account hit its limit in 90 days"
-            : `${worst.account.label} hit the limit in ${worst.hits} of ${worst.cells.length} ${worst.unit}s`,
+            ? "90天内没有账户触达上限"
+            : `${worst.account.label} 在${worst.cells.length}${unitWords[worst.unit].count}中有${worst.hits}${unitWords[worst.unit].count}触达上限`,
       };
   const headline = useHeadline(base);
-  if (selected === undefined) return <p className="fit-empty">No closed windows in 90 days.</p>;
+  if (selected === undefined) return <p className="fit-empty">90天内没有已结束的窗口。</p>;
   return (
     <div className="fit-history">
       <CardTop headline={headline.node} />
@@ -597,17 +599,17 @@ function HistoryView(props: {
               <Swatch kind="ramp" level={1} />
               <Swatch kind="ramp" level={2} />
               <Swatch kind="ramp" level={3} />
-              Peak: under 40, 40-60, 60-80, 80-99%
+              峰值：低于40、40-60、60-80、80-99%
             </span>
             <span>
               <i className="fit-sw-hit" aria-hidden="true" />
-              Hit the limit
+              触达上限
             </span>
             <span>
               <i className="fit-sw-cur" aria-hidden="true" />
-              Current window
+              当前窗口
             </span>
-            <span>One cell per window. Width is its length.</span>
+            <span>每个窗口一格，宽度即窗口长度。</span>
           </Legend>
         </div>
         <aside className="an2-panel">
@@ -674,7 +676,7 @@ function planOf(series: Series): Plan {
     const average = story.primary.averagePeak;
     const slots = lockedWorkSlots(series, account);
     if (average === null || story.primary.past.length < MIN_WINDOWS) {
-      keep.push({ account, reason: "Not enough history yet." });
+      keep.push({ account, reason: "历史记录不足。" });
       continue;
     }
     const cost = story.monthlyCost;
@@ -715,18 +717,18 @@ function planOf(series: Series): Plan {
           money: null,
           highest: null,
           drop: cheap ? cost : null,
-          verb: "Move work",
+          verb: "转移工作",
           glyph: "→",
-          title: `Move work from ${account.label} to ${target.label}`,
+          title: `把工作从 ${account.label} 转移到 ${target.label}`,
           why: [
-            `${target.label} stayed under ${Math.round(room.max)}% while ${account.label} was locked${
-              targetUnused === null ? "." : `. It leaves ~${money(targetUnused)} a month unused.`
+            `${account.label} 被锁定期间，${target.label} 一直低于${Math.round(room.max)}%${
+              targetUnused === null ? "。" : `。它每月约有${money(targetUnused)}未使用。`
             }`,
-            cheap ? `You could drop ${account.label} (${money(cost)} a month).` : "",
-            check ? "Check first that this work may run there." : "",
+            cheap ? `可以停用 ${account.label}（每月${money(cost)}）。` : "",
+            check ? "请先确认这些工作可以在那里运行。" : "",
           ]
             .filter(Boolean)
-            .join(" "),
+            .join(""),
         });
       } else {
         const full = siblings.toSorted((a, b) => b.max - a.max)[0];
@@ -740,15 +742,15 @@ function planOf(series: Series): Plan {
           money: null,
           highest: null,
           drop: null,
-          verb: "Upgrade",
+          verb: "升级",
           glyph: "↑",
-          title: `Upgrade ${account.label}`,
+          title: `升级 ${account.label}`,
           why:
             full === undefined
-              ? `No other ${story.providerName} account can take the work.`
+              ? `没有其他 ${story.providerName} 账户可以承接这些工作。`
               : fullAverage !== null && fullAverage >= SIBLING_AVG_MAX
-                ? `${full.other.label} averages ${Math.round(fullAverage)}% of its limit. Little room for this work.`
-                : `${full.other.label} was at ${Math.round(full.max)}% too.`,
+                ? `${full.other.label} 平均用掉其额度的${Math.round(fullAverage)}%，几乎没有余量承接这些工作。`
+                : `${full.other.label} 当时也达到了${Math.round(full.max)}%。`,
         });
       }
     } else if (
@@ -757,7 +759,7 @@ function planOf(series: Series): Plan {
       ((cost !== null && cost >= DOWNSIZE_PRICE) || average < CANCEL_AVG)
     ) {
       const cancel = average < CANCEL_AVG;
-      const unit = story.primary.kind === "cycle" ? "month" : "week";
+      const unit = story.primary.kind === "cycle" ? "单月" : "单周";
       const highest = Math.round(
         Math.max(story.primary.used, ...story.primary.past.map((w) => w.peak)),
       );
@@ -770,18 +772,18 @@ function planOf(series: Series): Plan {
         money: unused,
         highest,
         drop: null,
-        verb: cancel ? "Cancel?" : "Downsize",
+        verb: cancel ? "取消？" : "降级",
         glyph: cancel ? "×" : "↓",
-        title: `${cancel ? "Downsize or cancel" : "Downsize"} ${account.label}`,
-        why: `Highest ${unit}: ${highest}%. Never near the limit.${
-          story.name === "Work" ? " Work account: check who pays." : ""
+        title: `${cancel ? "降级或取消" : "降级"} ${account.label}`,
+        why: `${unit}最高${highest}%，从未接近上限。${
+          story.name === "Work" ? "这是工作账户，请确认由谁付费。" : ""
         }`,
       });
     } else {
       keep.push({
         account,
-        reason: `Averages ${Math.round(average)}%. ${
-          slots.length > 0 ? `Only ${slots.length} h blocked.` : "Never blocked."
+        reason: `平均${Math.round(average)}%。${
+          slots.length > 0 ? `仅被锁定${slots.length}小时。` : "从未被锁定。"
         }`,
       });
     }
@@ -801,7 +803,7 @@ function planOf(series: Series): Plan {
     );
     keep.push({
       account: action.account,
-      reason: `Averages ${averageOf(action.account)}%. Can take ${source?.account.label ?? "other"} work.`,
+      reason: `平均${averageOf(action.account)}%。可以承接 ${source?.account.label ?? "其他账户"} 的工作。`,
     });
   }
   // Blocked hours first, then money. Units are never combined.
@@ -868,20 +870,14 @@ function Lines(props: { readonly action: Action }) {
           account={action.account}
           percent={100}
           tone="danger"
-          text={`Locked ${action.blocked} h in work hours`}
+          text={`工作时段内锁定${action.blocked}小时`}
         />
         {sibling === null ? null : (
-          <MeterLine
-            account={sibling}
-            percent={peak}
-            tone="grey"
-            text={`Peaked ${peak}% meanwhile`}
-            arrow
-          />
+          <MeterLine account={sibling} percent={peak} tone="grey" text={`期间峰值${peak}%`} arrow />
         )}
         {action.drop === null ? null : (
           <p className="fit-note-line">
-            Could then drop {action.account.label} · {money(action.drop)} a month
+            之后可停用 {action.account.label} · 每月{money(action.drop)}
           </p>
         )}
       </>
@@ -895,23 +891,23 @@ function Lines(props: { readonly action: Action }) {
           account={action.account}
           percent={100}
           tone="danger"
-          text={`Locked ${action.blocked} h in work hours`}
+          text={`工作时段内锁定${action.blocked}小时`}
         />
         {sibling === null ? (
-          <p className="fit-note-line">No other {action.account.story.providerName} account</p>
+          <p className="fit-note-line">没有其他 {action.account.story.providerName} 账户</p>
         ) : roomy ? (
           <MeterLine
             account={sibling}
             percent={Math.round(action.siblingMax ?? 0)}
             tone="grey"
-            text={`Peaked ${Math.round(action.siblingMax ?? 0)}% meanwhile`}
+            text={`期间峰值${Math.round(action.siblingMax ?? 0)}%`}
           />
         ) : (
           <MeterLine
             account={sibling}
             percent={averageOf(sibling)}
             tone="grey"
-            text={`Averages ${averageOf(sibling)}%, no room`}
+            text={`平均${averageOf(sibling)}%，没有余量`}
           />
         )}
       </>
@@ -924,7 +920,7 @@ function Lines(props: { readonly action: Action }) {
       percent={averageOf(action.account)}
       tone="grey"
       tick={highest}
-      text={`Averages ${averageOf(action.account)}% · highest ${highest}%`}
+      text={`平均${averageOf(action.account)}% · 最高${highest}%`}
     />
   );
 }
@@ -932,7 +928,7 @@ function Lines(props: { readonly action: Action }) {
 /** Why an action's money is unknown: the account's own price note, or its price when the other account's is missing. */
 function unknownReason(action: Action): string {
   const story = action.account.story;
-  return story.monthlyCost === null ? story.priceNote.toLowerCase() : "price not set";
+  return story.monthlyCost === null ? story.priceNote : "未设置价格";
 }
 
 function Impact(props: { readonly action: Action }) {
@@ -941,21 +937,21 @@ function Impact(props: { readonly action: Action }) {
     return (
       <span className="fit-imp blk">
         {action.blocked}
-        <small>h unblocked</small>
+        <small>小时不再受阻</small>
       </span>
     );
   }
   if (action.money === null) {
     return (
       <span className="fit-imp unknown">
-        Unknown<small>{unknownReason(action)}</small>
+        未知<small>{unknownReason(action)}</small>
       </span>
     );
   }
   return (
     <span className="fit-imp">
       ~{money(action.money)}
-      <small>a month</small>
+      <small>每月</small>
     </span>
   );
 }
@@ -989,10 +985,10 @@ function ActionRow(props: {
           <button
             type="button"
             className="fit-link"
-            aria-label={`History of ${action.account.label}`}
+            aria-label={`${action.account.label} 的历史`}
             onClick={() => props.onOpenHistory(action.account.id)}
           >
-            History
+            历史
           </button>
         ) : null}
       </div>
@@ -1011,7 +1007,7 @@ function SectionHead(props: {
       <span className="fit-sh-t">
         {props.title}
         {props.info === undefined ? null : (
-          <InfoTip label={`How ${props.title.toLowerCase()} is counted`}>
+          <InfoTip label={`${props.title}的统计方式`}>
             <b>{props.title}</b>
             {props.info}
           </InfoTip>
@@ -1039,15 +1035,15 @@ function ActionsView(props: {
     .filter((action) => action.kind === "down")
     .toSorted((a, b) => (b.money ?? -1) - (a.money ?? -1));
   const parts = [
-    plan.freed > 0 ? `Free ${plan.freed} h of blocked work` : "",
-    plan.saved > 0 ? `${plan.freed > 0 ? "save" : "Save"} ~${money(plan.saved)} a month` : "",
+    plan.freed > 0 ? `解除${plan.freed}小时的受阻工作` : "",
+    plan.saved > 0 ? `每月节省约${money(plan.saved)}` : "",
   ].filter(Boolean);
   const base =
     plan.actions.length === 0
-      ? { big: "No changes worth making", cap: "Every plan fits your work" }
+      ? { big: "没有值得做的调整", cap: "每个套餐都适合你的工作" }
       : {
-          big: `${plural(plan.actions.length, "change")} worth making`,
-          cap: parts.length === 0 ? "Review each one below" : parts.join(" · "),
+          big: `${plan.actions.length}项值得做的调整`,
+          cap: parts.length === 0 ? "请逐项查看下方建议" : parts.join(" · "),
         };
   const headline = useHeadline(base);
   const hover = (line: { readonly big: string; readonly cap: string } | null): void =>
@@ -1081,15 +1077,15 @@ function ActionsView(props: {
     >
       <CardTop headline={headline.node} />
       {section(
-        "Unblock work",
-        `${plan.freed} h in 30 days`,
-        "Hours a limit was locked while you usually work (weekdays 08:00-20:00 until there are two weeks of history).",
+        "解除工作受阻",
+        `30天内${plan.freed}小时`,
+        "额度在你通常工作的时段被锁定的小时数（历史记录不足两周时，按工作日 08:00-20:00 计算）。",
         unblock,
       )}
       {section(
-        "Save money",
-        `~${money(plan.saved)} a month`,
-        "An estimate: the price times the share of the limit you leave unused.",
+        "节省费用",
+        `每月约${money(plan.saved)}`,
+        "估算值：价格乘以你未使用的额度占比。",
         save,
       )}
       {plan.keep.length > 0 ? (
@@ -1125,9 +1121,9 @@ function KeepSection(props: {
         <svg className="fit-chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
           <path d="M4 2.5 7.5 6 4 9.5" />
         </svg>
-        <span className="fit-sh-t">Keep</span>
-        <span className="fit-disclose-hint">No change needed</span>
-        <span className="fit-sh-v">{plural(props.keep.length, "account")}</span>
+        <span className="fit-sh-t">保持不变</span>
+        <span className="fit-disclose-hint">无需调整</span>
+        <span className="fit-sh-v">{props.keep.length}个账户</span>
       </button>
       {props.open
         ? props.keep.map((entry) => {
@@ -1151,10 +1147,10 @@ function KeepSection(props: {
                     <button
                       type="button"
                       className="fit-link"
-                      aria-label={`History of ${entry.account.label}`}
+                      aria-label={`${entry.account.label} 的历史`}
                       onClick={() => props.onOpenHistory(entry.account.id)}
                     >
-                      History
+                      历史
                     </button>
                   ) : null}
                 </div>
@@ -1175,7 +1171,7 @@ export function PlanFitCard(props: { readonly series: Series }) {
     .filter((history): history is History => history !== null)
     .toSorted(compareHistory);
   return (
-    <ViewCard title="Plan Fit" views={views} view={view} onView={setView}>
+    <ViewCard title="套餐适配" views={views} view={view} onView={setView}>
       {view === "actions" ? (
         <ActionsView
           series={props.series}

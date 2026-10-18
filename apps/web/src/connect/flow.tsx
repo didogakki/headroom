@@ -4,7 +4,8 @@ import type { AuthMethod, MethodAvailability, Provider } from "@headroom/core/co
 
 import { api, ApiError, type Attempt, type OverviewConnection } from "../api.ts";
 import { BrandMark } from "../icons.tsx";
-import { accountName, authMethodWords, planLabel, providerName } from "@headroom/view-model/labels";
+import { planLabel, providerName } from "@headroom/view-model/labels";
+import { zhAccountName, zhAuthMethod, zhMessage } from "../lib/zh.ts";
 import { Button, ButtonLink } from "../ui/button.tsx";
 import { messageOf } from "../lib/load.ts";
 import { Result } from "../ui/result.tsx";
@@ -25,7 +26,7 @@ import {
 
 type Step = 2 | 3 | 4;
 
-const stepWords = ["Choose", "Sign In", "Check", "Done"] as const;
+const stepWords = ["选择", "登录", "检查", "完成"] as const;
 
 /** Where the stepper stands, from the state of the attempt. */
 function stepOf(attempt: Attempt | null, startFailed: boolean): { step: Step; state: StepState } {
@@ -94,8 +95,8 @@ export function ConnectFlow(props: FlowProps) {
         if (generation.current === mine) {
           setStartError(
             cause instanceof ApiError && cause.code === "method_unavailable"
-              ? "That method is not available on this server. Install its CLI, or use another method."
-              : messageOf(cause),
+              ? "此服务器上无法使用该方式。请安装它的 CLI，或使用其他方式。"
+              : zhMessage(messageOf(cause)),
           );
         }
       }
@@ -133,7 +134,7 @@ export function ConnectFlow(props: FlowProps) {
         if (generation.current === mine) setAttempt(next);
       } catch (cause) {
         if (generation.current !== mine) return;
-        setError(messageOf(cause));
+        setError(zhMessage(messageOf(cause)));
         // A new object makes this effect schedule the next poll.
         setAttempt({ ...attempt });
       }
@@ -178,7 +179,7 @@ export function ConnectFlow(props: FlowProps) {
       const next = await api.submitInput(attempt.id, input);
       if (generation.current === mine) setAttempt(next);
     } catch (cause) {
-      if (generation.current === mine) setError(messageOf(cause));
+      if (generation.current === mine) setError(zhMessage(messageOf(cause)));
     } finally {
       setBusy(false);
     }
@@ -194,21 +195,21 @@ export function ConnectFlow(props: FlowProps) {
   let statusNode = (
     <span className="status">
       <Spinner />
-      Starting
+      正在启动
     </span>
   );
   if (failed) {
     statusKey = "failed";
-    statusNode = <span className="status">Did Not Finish</span>;
+    statusNode = <span className="status">未完成</span>;
   } else if (succeeded) {
     statusKey = "done";
-    statusNode = <span className="status">Connected</span>;
+    statusNode = <span className="status">已连接</span>;
   } else if (checking) {
     statusKey = "checking";
     statusNode = (
       <span className="status">
         <Spinner />
-        Checking
+        检查中
       </span>
     );
   } else if (attempt !== null) {
@@ -216,7 +217,7 @@ export function ConnectFlow(props: FlowProps) {
     statusNode = (
       <span className="status">
         <Spinner />
-        {`Waiting for You${left === null ? "" : ` · ${left} left`}`}
+        {`等待你操作${left === null ? "" : ` · 剩余 ${left}`}`}
       </span>
     );
   }
@@ -225,8 +226,8 @@ export function ConnectFlow(props: FlowProps) {
   const connected = props.connections.find((entry) => entry.id === connectedId);
   const who =
     connected === undefined
-      ? `Your ${name} account`
-      : [accountName(connected), planLabel(connected.plan)]
+      ? `你的 ${name} 账户`
+      : [zhAccountName(connected), planLabel(connected.plan)]
           .filter((part) => part !== null)
           .join(" · ");
 
@@ -246,12 +247,12 @@ export function ConnectFlow(props: FlowProps) {
       <Stepper words={stepWords} step={step} state={state} />
       {showMethods && method !== null ? (
         <Segmented
-          label="Sign-in method"
+          label="登录方式"
           value={method}
           onChange={switchMethod}
           options={methods.map((entry) => ({
             value: entry,
-            label: authMethodWords(entry),
+            label: zhAuthMethod(entry),
             disabled: !isUsable(entry, availability),
           }))}
         />
@@ -263,9 +264,9 @@ export function ConnectFlow(props: FlowProps) {
       ) : null}
       {method === null ? (
         <div className="stage">
-          <Result ok={false} title="Not Available">
+          <Result ok={false} title="不可用">
             {blocked === undefined
-              ? `${name} cannot sign in on this server.`
+              ? `${name} 无法在此服务器上登录。`
               : unavailableNote(name, blocked, alternatives)}
           </Result>
           <div className="row">
@@ -275,12 +276,12 @@ export function ConnectFlow(props: FlowProps) {
       ) : null}
       {startError !== null ? (
         <div className="stage">
-          <Result ok={false} title="Did Not Finish">
-            {`The sign-in could not start. ${startError}`}
+          <Result ok={false} title="未完成">
+            {`登录无法启动。${startError}`}
           </Result>
           <div className="row">
             <Button variant="primary" onClick={() => method !== null && void begin(method)}>
-              Try Again
+              重试
             </Button>
             <CloseAction reconnecting={reconnectId !== undefined} onClose={onClose} />
           </div>
@@ -293,12 +294,12 @@ export function ConnectFlow(props: FlowProps) {
       ) : null}
       {attempt !== null && stopped ? (
         <div className="stage">
-          <Result ok={false} title="Did Not Finish">
+          <Result ok={false} title="未完成">
             {stoppedReason(attempt)}
           </Result>
           <div className="row">
             <Button variant="primary" onClick={() => method !== null && void begin(method)}>
-              Try Again
+              重试
             </Button>
             <CloseAction reconnecting={reconnectId !== undefined} onClose={onClose} />
           </div>
@@ -306,20 +307,20 @@ export function ConnectFlow(props: FlowProps) {
       ) : null}
       {attempt !== null && succeeded ? (
         <div className="stage">
-          <Result ok title="Connected">
-            {`${who} is connected. Its first refresh is running and its limits appear in the table below within a minute.`}
+          <Result ok title="已连接">
+            {`${who} 已连接。它的首次刷新正在进行，额度会在一分钟内显示在下方表格中。`}
           </Result>
           <div className="row">
             <ButtonLink variant="primary" href="#/">
-              View Accounts
+              查看账户
             </ButtonLink>
             {reconnectId === undefined ? (
               <Button variant="quiet" onClick={onClose}>
-                Connect Another
+                再连接一个
               </Button>
             ) : (
               <ButtonLink variant="quiet" href="#/connect">
-                Connect Another
+                再连接一个
               </ButtonLink>
             )}
           </div>
@@ -350,13 +351,13 @@ function CloseAction(props: { readonly reconnecting: boolean; readonly onClose: 
   if (props.reconnecting) {
     return (
       <ButtonLink variant="quiet" href="#/">
-        Back to Accounts
+        返回账户
       </ButtonLink>
     );
   }
   return (
     <Button variant="quiet" onClick={props.onClose}>
-      Choose Another Provider
+      选择其他服务商
     </Button>
   );
 }

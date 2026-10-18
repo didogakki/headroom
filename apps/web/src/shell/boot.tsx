@@ -51,12 +51,12 @@ export function BootFrame(props: { readonly route: Route }) {
       <header className="top">
         <Lockup href={href({ page: "overview" })} />
         {view === null ? null : <ViewSwitcher active={view} />}
-        <nav aria-label="Page">
+        <nav aria-label="页面">
           {onConnectPage ? (
-            <ButtonLink href={href({ page: "overview" })}>Back to Accounts</ButtonLink>
+            <ButtonLink href={href({ page: "overview" })}>返回账户</ButtonLink>
           ) : (
             <ButtonLink variant="primary" icon={<PlusIcon />} href={href({ page: "connect" })}>
-              Connect
+              连接
             </ButtonLink>
           )}
           <Sk width={36} height={36} className="sk-round" />

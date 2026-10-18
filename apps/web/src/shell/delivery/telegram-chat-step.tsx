@@ -50,12 +50,12 @@ export function TelegramChatStep(props: {
   return (
     <div className="dl-form">
       {props.verified ? (
-        <Result ok title={`${props.username} Verified`}>
-          Your bot token works.
+        <Result ok title={`${props.username} 已验证`}>
+          你的机器人令牌有效。
         </Result>
       ) : null}
       <div className="dl-lead-row">
-        <p className="secondary dl-lead">{`Open ${props.username} and send it any message.`}</p>
+        <p className="secondary dl-lead">{`打开 ${props.username}，并给它发送任意一条消息。`}</p>
         <ButtonLink
           size="sm"
           href={`https://t.me/${props.username.replace(/^@/, "")}`}
@@ -63,36 +63,36 @@ export function TelegramChatStep(props: {
           rel="noreferrer noopener"
           icon={<ExternalIcon />}
         >
-          {`Open ${props.username}`}
+          {`打开 ${props.username}`}
         </ButtonLink>
       </div>
       {chats.length > 0 ? (
         <ChatList chats={chats} value={typedOk ? null : (chosen?.id ?? null)} onChange={pick} />
       ) : stopped ? (
-        <p className="muted dl-note">No message found yet.</p>
+        <p className="muted dl-note">还没有找到消息。</p>
       ) : (
         <output className="dl-waiting">
           <Spinner />
-          <span>Waiting for your message…</span>
+          <span>正在等待你的消息…</span>
         </output>
       )}
       {stopped ? (
         <div>
           <Button size="sm" onClick={again}>
-            Check Again
+            再检查一次
           </Button>
         </div>
       ) : null}
       <Problem>
         {problem === "rejected"
-          ? "Telegram did not accept the bot token."
+          ? "Telegram 不接受这个机器人令牌。"
           : problem === "failed" && chats.length === 0
-            ? "Headroom could not reach Telegram. It keeps trying."
+            ? "Headroom 无法连接到 Telegram，它会继续尝试。"
             : null}
       </Problem>
-      <Disclosure label="Enter a Chat ID Instead">
+      <Disclosure label="改为输入聊天 ID">
         <TextField
-          label="Chat ID"
+          label="聊天 ID"
           value={typed}
           error={typedError}
           placeholder="123456789"
@@ -106,10 +106,10 @@ export function TelegramChatStep(props: {
           disabled={choice === null}
           onClick={() => choice !== null && props.onContinue(choice)}
         >
-          Continue
+          继续
         </Button>
         <Button variant="quiet" onClick={props.onBack}>
-          Back
+          返回
         </Button>
       </div>
     </div>

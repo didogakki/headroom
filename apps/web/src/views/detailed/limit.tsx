@@ -5,6 +5,7 @@ import { useSettings } from "../../lib/settings.tsx";
 import { displayMeter } from "@headroom/view-model/tone";
 import { ResetCaption } from "../../lib/reset-caption.tsx";
 import { When } from "../../lib/when.tsx";
+import { zhCaption, zhLabel, zhUnit, zhWindow } from "../../lib/zh.ts";
 import { Bar } from "../../ui/bar.tsx";
 
 type MeterCell = Extract<Cell, { kind: "meter" }>;
@@ -32,7 +33,9 @@ export function headlineOf(connection: OverviewConnection, cells: readonly Cell[
 }
 
 function windowName(cell: MeterCell | AmountCell): string {
-  return cell.window === null ? cell.label : `${cell.label} · ${cell.window}`;
+  return cell.window === null
+    ? zhLabel(cell.label)
+    : `${zhLabel(cell.label)} · ${zhWindow(cell.window)}`;
 }
 
 /** The limit column of a row: figure, window, bar, and the reset line. Unknown stays unknown, never zero. */
@@ -53,12 +56,12 @@ export function RowLimit(props: { readonly headline: Headline }) {
       <span className="d-limit">
         <span className="d-limit-top">
           <b className={known ? undefined : "muted"}>
-            {known ? `${shown.value}${shown.unit}` : "—"}
+            {known ? `${shown.value}${zhUnit(shown.unit)}` : "—"}
           </b>
-          <span className="window">{known ? name : `${name} · Not reported`}</span>
+          <span className="window">{known ? name : `${name} · 未报告`}</span>
           {shown.caption === null ? null : (
             <span className={`tone ${shown.caption === "Running Low" ? "warn" : "bad"}`}>
-              {shown.caption}
+              {zhCaption(shown.caption)}
             </span>
           )}
         </span>
@@ -68,10 +71,10 @@ export function RowLimit(props: { readonly headline: Headline }) {
             percent={shown.fill}
             tone={shown.tone ?? "good"}
             {...(cell.used === null ? {} : { valueNow: cell.used })}
-            label={`${name} ${cell.used ?? 0}% used`}
+            label={`${name} 已用 ${cell.used ?? 0}%`}
           />
         ) : (
-          <Bar thin unknown label={`${name} · Not reported`} />
+          <Bar thin unknown label={`${name} · 未报告`} />
         )}
       </span>
     );
@@ -88,29 +91,29 @@ export function RowLimit(props: { readonly headline: Headline }) {
         <span className="d-limit-top">
           <b>
             {`${prefix}${formatNumber(value, cell.decimals)}`}
-            {cell.of === null ? "" : ` of ${prefix}${cell.of}`}
+            {cell.of === null ? "" : ` / ${prefix}${cell.of}`}
           </b>
-          <span className="window">{cell.label}</span>
+          <span className="window">{zhLabel(cell.label)}</span>
         </span>
         {hasBar ? (
           <Bar
             thin
             percent={left}
             tone={left < 10 ? "bad" : left < settings.lowThresholdPercent ? "warn" : "good"}
-            label={`${cell.label} ${formatNumber(value, cell.decimals)} left`}
+            label={`${zhLabel(cell.label)} 剩余 ${formatNumber(value, cell.decimals)}`}
           />
         ) : (
-          <Bar thin unknown label={`${cell.label} total not reported`} />
+          <Bar thin unknown label={`${zhLabel(cell.label)} 总额未报告`} />
         )}
       </span>
     );
   }
-  const name = headline.kind === "unlimited" ? windowName(headline.cell) : "Not reported";
+  const name = headline.kind === "unlimited" ? windowName(headline.cell) : "未报告";
   return (
     <span className="d-limit">
       <span className="d-limit-top">
         <b className={headline.kind === "unlimited" ? undefined : "muted"}>
-          {headline.kind === "unlimited" ? "Unlimited" : "—"}
+          {headline.kind === "unlimited" ? "无限制" : "—"}
         </b>
         <span className="window">{name}</span>
       </span>
@@ -130,11 +133,9 @@ export function RowReset(props: {
     return (
       <span className="d-reset">
         {props.updatedAt === null ? (
-          "Never refreshed"
+          "从未刷新"
         ) : (
-          <>
-            Updated <When at={props.updatedAt} kind="ago" />
-          </>
+          <When at={props.updatedAt} kind="ago" suffix="更新" />
         )}
       </span>
     );

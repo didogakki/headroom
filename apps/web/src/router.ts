@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 
 /** The dashboard views, in switcher order. */
 export const views = [
-  { id: "overview", label: "Overview" },
-  { id: "detailed", label: "Detailed" },
-  { id: "compare", label: "Compare" },
-  { id: "timeline", label: "Timeline" },
-  { id: "wallet", label: "Wallet" },
-  { id: "analytics", label: "Analytics" },
+  { id: "overview", label: "总览" },
+  { id: "detailed", label: "详情" },
+  { id: "compare", label: "对比" },
+  { id: "timeline", label: "时间线" },
+  { id: "wallet", label: "钱包" },
+  { id: "analytics", label: "分析" },
 ] as const;
 
 export type ViewId = (typeof views)[number]["id"];

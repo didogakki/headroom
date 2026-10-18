@@ -31,29 +31,29 @@ export function ArrangePopover(props: { readonly overview: ViewProps["overview"]
       // A later move sends the full order again, so only the newest save rolls back.
       if (seq !== newest.current) return;
       applyOrder(base);
-      setError("Could not save the provider order. Nothing was changed.");
+      setError("无法保存服务商顺序，未做任何更改。");
     });
   };
 
   return (
     <Popover
-      label="Arrange"
-      panelLabel="Provider Order"
+      label="调整顺序"
+      panelLabel="服务商顺序"
       panelClassName="notif arrange-pop"
       triggerClassName={buttonClass("quiet", "sm", "d-arrange")}
       trigger={
         <>
           <ReorderIcon />
-          Arrange
+          调整顺序
         </>
       }
     >
       <div className="arrange-head">
-        <h2>Provider Order</h2>
-        <p className="muted">Drag to reorder.</p>
+        <h2>服务商顺序</h2>
+        <p className="muted">拖动以调整顺序。</p>
       </div>
       <SortableList
-        label="Provider Order"
+        label="服务商顺序"
         items={shown.map((provider) => ({
           id: provider,
           label: providerName(provider),

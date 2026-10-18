@@ -51,7 +51,7 @@ export function Dialog(props: {
     >
       <div className="dhead">
         <h2 id={titleId}>{props.title}</h2>
-        <Button variant="quiet" size="sm" aria-label="Close" onClick={() => ref.current?.close()}>
+        <Button variant="quiet" size="sm" aria-label="关闭" onClick={() => ref.current?.close()}>
           <CloseIcon />
         </Button>
       </div>

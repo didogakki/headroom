@@ -1,19 +1,14 @@
 import { useId } from "react";
 
 import { BrandMark, PencilIcon, PlusIcon } from "../../icons.tsx";
-import { accountName, planLabel, providerName } from "@headroom/view-model/labels";
-import { dayLabel } from "@headroom/view-model/wallet-dates";
+import { planLabel, providerName } from "@headroom/view-model/labels";
 import { presentPanel } from "@headroom/view-model/present";
 import { formatMoney } from "@headroom/view-model/wallet-money";
-import {
-  bankedText,
-  creditBalanceText,
-  type WalletAccount,
-  type WalletProvider,
-} from "@headroom/view-model/wallet";
+import type { WalletAccount, WalletProvider } from "@headroom/view-model/wallet";
 
 import { useNow } from "../../lib/now.ts";
 import { useSettings } from "../../lib/settings.tsx";
+import { zhAccountName, zhBanked, zhCreditBalance, zhDay, zhLabel } from "../../lib/zh.ts";
 import { Button } from "../../ui/button.tsx";
 import { Pill } from "../../ui/pill.tsx";
 import { headlineOf, RowLimit } from "../detailed/limit.tsx";
@@ -22,13 +17,13 @@ import { figureText, originalNote } from "./amount.ts";
 /** What the account costs per month: a price, Free, Included, or Not Set. */
 function CostCell(props: { readonly account: WalletAccount }) {
   const { cost, monthly, billed } = props.account;
-  if (cost === null) return <span className="w-unset">Not Set</span>;
-  if (cost.kind === "free") return <Pill tone="quiet">Free</Pill>;
+  if (cost === null) return <span className="w-unset">未设置</span>;
+  if (cost.kind === "free") return <Pill tone="quiet">免费</Pill>;
   if (cost.kind === "included") {
     return (
       <span className="w-included">
-        <Pill tone="quiet">Included</Pill>
-        <span className="muted">with {cost.includedWith}</span>
+        <Pill tone="quiet">已包含</Pill>
+        <span className="muted">含在 {cost.includedWith} 中</span>
       </span>
     );
   }
@@ -37,8 +32,8 @@ function CostCell(props: { readonly account: WalletAccount }) {
   const notes: string[] = [];
   // No rate: say so. A yearly plan names its yearly price; a monthly one names what it was converted from.
   if (monthly.shown === null) notes.push(originalNote(monthly) ?? "");
-  if (yearly !== null) notes.push(`${formatMoney(yearly)} / year`);
-  else if (monthly.shown !== null) notes.push(originalNote(monthly, " billed") ?? "");
+  if (yearly !== null) notes.push(`${formatMoney(yearly)} / 年`);
+  else if (monthly.shown !== null) notes.push(originalNote(monthly, " 计费") ?? "");
   return (
     <span className="w-cost">
       <span className="w-figure num">{figureText(monthly)}</span>
@@ -59,7 +54,7 @@ function SpendCell(props: { readonly account: WalletAccount }) {
   if (usageSpend === null) return null;
   const note = originalNote(usageSpend);
   return (
-    <span className="w-cost" title={usageSpend.label}>
+    <span className="w-cost" title={zhLabel(usageSpend.label)}>
       <span className="w-figure num">{figureText(usageSpend)}</span>
       {note === null ? null : <span className="muted num">{note}</span>}
     </span>
@@ -76,11 +71,9 @@ function CreditsCell(props: { readonly account: WalletAccount }) {
   const { balance, resets } = credits;
   return (
     <span className="w-cost">
-      {balance === null ? null : <span className="w-figure num">{creditBalanceText(balance)}</span>}
+      {balance === null ? null : <span className="w-figure num">{zhCreditBalance(balance)}</span>}
       {resets === null ? null : (
-        <span className={balance === null ? "w-figure num" : "muted num"}>
-          {bankedText(resets)}
-        </span>
+        <span className={balance === null ? "w-figure num" : "muted num"}>{zhBanked(resets)}</span>
       )}
     </span>
   );
@@ -106,7 +99,7 @@ function AccountRow(props: {
 }) {
   const { account } = props;
   const { connection, nextRenewal } = account;
-  const name = accountName(connection);
+  const name = zhAccountName(connection);
   const plan = planLabel(connection.plan);
   return (
     <li className="w-row">
@@ -126,45 +119,40 @@ function AccountRow(props: {
           <span className="w-sub who">{connection.identity}</span>
         )}
       </div>
-      <div className="w-col w-c-cost" data-label="Cost / Month">
+      <div className="w-col w-c-cost" data-label="费用 / 月">
         <CostCell account={account} />
       </div>
       <div className="w-col w-c-used" data-label={props.usedLabel}>
         <UsedCell account={account} />
       </div>
-      <div className="w-col w-c-renew" data-label="Renews">
+      <div className="w-col w-c-renew" data-label="续订">
         {nextRenewal === null ? (
           <span className="muted">—</span>
         ) : (
-          <span>{dayLabel(nextRenewal)}</span>
+          <span>{zhDay(nextRenewal)}</span>
         )}
       </div>
-      <div className="w-col w-c-spend" data-label="Usage Spend">
+      <div className="w-col w-c-spend" data-label="用量支出">
         <SpendCell account={account} />
       </div>
-      <div className="w-col w-c-credits" data-label="Credits">
+      <div className="w-col w-c-credits" data-label="积分">
         <CreditsCell account={account} />
       </div>
       <div className="w-act">
         {account.cost === null ? (
           <Button variant="quiet" size="sm" onClick={props.onEdit}>
-            Set Cost
+            设置费用
           </Button>
         ) : (
-          <Button
-            variant="quiet"
-            size="sm"
-            aria-label={`Edit cost of ${name}`}
-            onClick={props.onEdit}
-          >
+          <Button variant="quiet" size="sm" aria-label={`编辑${name}的费用`} onClick={props.onEdit}>
             <PencilIcon />
           </Button>
         )}
         <Button
           variant="quiet"
           size="sm"
-          aria-label={`Add top-up for ${name}`}
-          title="Add Top-Up"
+          aria-label={`为${name}添加充值`}
+          title="添加充值"
           onClick={props.onAddTopUp}
         >
           <PlusIcon />
@@ -174,18 +162,18 @@ function AccountRow(props: {
   );
 }
 
-/** The provider's monthly subtotal: "$300 / month", or Not Set when no account has a cost. */
+/** The provider's monthly subtotal: "$300 / 月", or 未设置 when no account has a cost. */
 function Subtotal(props: { readonly group: WalletProvider }) {
   const { group } = props;
   if (group.accounts.every((account) => account.cost === null)) {
-    return <span className="w-subtotal muted">Not set</span>;
+    return <span className="w-subtotal muted">未设置</span>;
   }
   return (
     <span className="w-subtotal">
       <span className="num">{formatMoney(group.monthly.money)}</span>
-      <span className="muted"> / month</span>
+      <span className="muted"> / 月</span>
       {group.monthly.missing > 0 ? (
-        <span className="muted"> · {group.monthly.missing} left out</span>
+        <span className="muted"> · {group.monthly.missing} 项未计入</span>
       ) : null}
     </span>
   );
@@ -199,7 +187,7 @@ function GroupRow(props: { readonly group: WalletProvider }) {
       <BrandMark provider={group.provider} />
       <h3>{providerName(group.provider)}</h3>
       {group.accounts.length > 1 ? (
-        <span className="muted">{group.accounts.length} accounts</span>
+        <span className="muted">{group.accounts.length} 个账户</span>
       ) : null}
       <Subtotal group={group} />
     </li>
@@ -217,20 +205,20 @@ export function AccountsTable(props: {
 }) {
   const headingId = useId();
   // The limit shows as used or as left, following the owner's Limits setting; the column says which.
-  const usedLabel = useSettings().settings.limitsView === "left" ? "Left" : "Used";
+  const usedLabel = useSettings().settings.limitsView === "left" ? "剩余" : "已用";
   return (
     <section className="provider w-accounts" aria-labelledby={headingId}>
       <header>
-        <h2 id={headingId}>Accounts</h2>
+        <h2 id={headingId}>账户</h2>
       </header>
       <div className="w-card">
         <div className="w-colhead">
-          <span>Account</span>
-          <span>Cost / Month</span>
+          <span>账户</span>
+          <span>费用 / 月</span>
           <span>{usedLabel}</span>
-          <span>Renews</span>
-          <span>Usage Spend</span>
-          <span>Credits</span>
+          <span>续订</span>
+          <span>用量支出</span>
+          <span>积分</span>
           <span />
         </div>
         <ul className="w-rows">

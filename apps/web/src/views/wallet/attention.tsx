@@ -1,6 +1,7 @@
 import { AlertIcon, BrandMark } from "../../icons.tsx";
-import { accountName, providerName } from "@headroom/view-model/labels";
+import { providerName } from "@headroom/view-model/labels";
 
+import { zhAccountName } from "../../lib/zh.ts";
 import { Button } from "../../ui/button.tsx";
 import { Popover, useCloseLayer } from "../../ui/menu.tsx";
 import type { AttentionItem } from "./attention-items.ts";
@@ -8,14 +9,14 @@ import type { AttentionItem } from "./attention-items.ts";
 function Row(props: { readonly item: AttentionItem }) {
   const { item } = props;
   const close = useCloseLayer();
-  const who = item.connection === undefined ? null : accountName(item.connection);
+  const who = item.connection === undefined ? null : zhAccountName(item.connection);
   return (
     <li>
       {item.connection === undefined ? <span /> : <BrandMark provider={item.connection.provider} />}
       <span className="w-attn-text">
         <span className="w-attn-name">
           {item.connection === undefined ? (
-            "Removed account"
+            "已删除的账户"
           ) : (
             <>
               {providerName(item.connection.provider)}
@@ -56,11 +57,11 @@ export function Attention(props: {
 }) {
   const { items } = props;
   if (items.length === 0) return null;
-  const count = `${items.length} ${items.length === 1 ? "item needs" : "items need"} attention`;
+  const count = `${items.length} 项需要关注`;
   return (
     <Popover
-      label={`${props.title}: ${count}`}
-      panelLabel={`${props.title}: ${count}`}
+      label={`${props.title}：${count}`}
+      panelLabel={`${props.title}：${count}`}
       panelClassName="notif w-attn-pop"
       triggerClassName="w-attn-trigger"
       trigger={<AlertIcon />}

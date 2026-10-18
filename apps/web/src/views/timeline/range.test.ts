@@ -25,7 +25,7 @@ describe("axisFor", () => {
     expect(axis.end).toBe(new Date(2025, 9, 10).getTime());
     expect(axis.columns).toHaveLength(14);
     expect(axis.columns[7]).toBe(new Date(2025, 9, 3).getTime());
-    expect(rangeLabel(axis)).toBe("Sep 26 – Oct 9 · 14 Days");
+    expect(rangeLabel(axis)).toBe("9月26日 – 10月9日 · 14天");
   });
   test("a step moves the weekly range by whole weeks", () => {
     expect(axisFor("weekly", now, 1).base).toBe(new Date(2025, 9, 3).getTime());
@@ -54,11 +54,11 @@ describe("axisFor", () => {
     expect(axis.columns).toHaveLength(10);
     expect(axis.base).toBe(new Date(2025, 8, 5).getTime());
     expect(axisFor("cycle", now, 1).base).toBe(new Date(2025, 9, 3).getTime());
-    expect(rangeLabel(axis)).toBe("Sep 5 – Nov 13 · 10 Weeks");
+    expect(rangeLabel(axis)).toBe("9月5日 – 11月13日 · 10周");
   });
   test("a 24-hour range inside one day shows one date", () => {
     const axis = axisFor("session", new Date(2025, 9, 3, 7, 0).getTime(), 0);
-    expect(rangeLabel(axis).endsWith("· 24 Hours")).toBe(true);
+    expect(rangeLabel(axis).endsWith("· 24小时")).toBe(true);
   });
 });
 
@@ -105,13 +105,13 @@ describe("wording", () => {
   const monday = new Date(2025, 9, 6, 19, 5).getTime();
   test("clock follows the setting", () => {
     expect(clockText(monday, "24h")).toBe("19:05");
-    expect(clockText(monday, "12h")).toBe("7:05 PM");
-    expect(clockText(new Date(2025, 9, 6, 0, 0).getTime(), "12h")).toBe("12:00 AM");
-    expect(dayClock(monday, "24h")).toBe("Mon 19:05");
+    expect(clockText(monday, "12h")).toBe("下午7:05");
+    expect(clockText(new Date(2025, 9, 6, 0, 0).getTime(), "12h")).toBe("上午12:00");
+    expect(dayClock(monday, "24h")).toBe("周一 19:05");
   });
   test("the reset on a bar depends on the window kind", () => {
-    expect(resetShort("weekly", monday, "24h")).toBe("Mon 19:05");
+    expect(resetShort("weekly", monday, "24h")).toBe("周一 19:05");
     expect(resetShort("session", monday, "24h")).toBe("19:05");
-    expect(resetShort("cycle", monday, "24h")).toBe("Oct 6");
+    expect(resetShort("cycle", monday, "24h")).toBe("10月6日");
   });
 });

@@ -21,33 +21,33 @@ describe("popover wording", () => {
   if (lane === null) throw new Error("expected a weekly lane");
   test("the current window says when it resets, in our wording", () => {
     const tip = windowTip(lane, "cur", context);
-    expect(tip.title).toBe("Claude · Work · Weekly");
-    expect(tip.when).toBe("Resets in 2 days 8 h · Sun, Oct 5 · 19:00");
-    expect(tip.lines[0]).toEqual({ text: "91% Used · Weekly", tone: "bad" });
-    expect(tip.lines.map((line) => line.text)).toContain("Opened Sun, Sep 28 · 19:00");
+    expect(tip.title).toBe("Claude · Work · 每周");
+    expect(tip.when).toBe("2天8小时后重置 · 10月5日 周日 19:00");
+    expect(tip.lines[0]).toEqual({ text: "已用 91% · 每周", tone: "bad" });
+    expect(tip.lines.map((line) => line.text)).toContain("开启于9月28日 周日 19:00");
   });
   test("Left flips the figure", () => {
-    expect(usedText(91, { ...context, view: "left" })).toBe("9% Left");
-    expect(usedText(null, context)).toBe("Not reported");
+    expect(usedText(91, { ...context, view: "left" })).toBe("剩余 9%");
+    expect(usedText(null, context)).toBe("未报告");
   });
   test("the earlier window says it is worked out from the length", () => {
     const tip = windowTip(lane, "prev", context);
-    expect(tip.when).toBe("Earlier window · ended Sun, Sep 28 · 19:00");
-    expect(tip.lines.map((line) => line.text)).toContain("Worked out from the window length");
+    expect(tip.when).toBe("较早的窗口 · 结束于9月28日 周日 19:00");
+    expect(tip.lines.map((line) => line.text)).toContain("根据窗口长度推算");
   });
   test("the next window opens when this one resets", () => {
     const tip = windowTip(lane, "next", context);
-    expect(tip.when).toBe("Next window · opens Sun, Oct 5 · 19:00");
-    expect(tip.lines[0]?.text).toBe("Resets Sun, Oct 12 · 19:00");
+    expect(tip.when).toBe("下一个窗口 · 开启于10月5日 周日 19:00");
+    expect(tip.lines[0]?.text).toBe("10月12日 周日 19:00重置");
   });
   test("a session's next window starts on next use", () => {
     const session = laneOf(account, "session", now);
     if (session === null) throw new Error("expected a session lane");
-    expect(windowTip(session, "next", context).when).toBe("Next window · starts on next use");
+    expect(windowTip(session, "next", context).when).toBe("下一个窗口 · 下次使用时开始");
   });
   test("every bar of a current lane has a popover, and a label is one sentence", () => {
     const tips = laneTips([lane], context);
     expect([...tips.keys()]).toEqual([`${lane.id}:prev`, `${lane.id}:cur`, `${lane.id}:next`]);
-    expect(tipLabel(windowTip(lane, "cur", context))).toContain("Resets in 2 days 8 h");
+    expect(tipLabel(windowTip(lane, "cur", context))).toContain("2天8小时后重置");
   });
 });

@@ -28,7 +28,7 @@ export function ProviderChips(props: {
         aria-pressed={props.value === "all"}
         onClick={() => props.onChange("all")}
       >
-        <ProviderToken name="All" count={props.total} />
+        <ProviderToken name="全部" count={props.total} />
       </button>
       {props.options.map((option) => (
         <button

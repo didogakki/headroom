@@ -82,15 +82,15 @@ export function WebhookFlow(props: {
       ) : null}
       {stage === "test" ? (
         <TestStep
-          lead={`Send a test request to ${hostOf(url)}.`}
+          lead={`向 ${hostOf(url)} 发送一个测试请求。`}
           identity={identity}
           onIdentity={setIdentity}
-          sendLabel={keeping ? "Save and Send Test" : "Send Test"}
+          sendLabel={keeping ? "保存并发送测试" : "发送测试"}
           send={send}
           failureText={(code) => testProblem("webhook", code)}
-          okTitle="Receiver Answered"
-          okNote="Your receiver accepted the test."
-          finishLabel="Finish"
+          okTitle="接收端已响应"
+          okNote="你的接收端已接受这次测试。"
+          finishLabel="完成设置"
           finish={keeping ? () => Promise.resolve() : save}
           saveAnyway={!keeping}
           onFinished={() => setStage("done")}
@@ -100,12 +100,12 @@ export function WebhookFlow(props: {
       ) : null}
       {stage === "done" ? (
         <>
-          <Result ok title="Webhook Is Set Up">
-            {`Notices will arrive at ${hostOf(url)}.`}
+          <Result ok title="Webhook 已设置完成">
+            {`通知将发送到 ${hostOf(url)}。`}
           </Result>
           <div className="dl-actions">
             <Button variant="primary" onClick={props.onDone}>
-              Done
+              完成
             </Button>
           </div>
         </>

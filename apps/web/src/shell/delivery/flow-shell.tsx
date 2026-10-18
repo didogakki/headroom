@@ -16,7 +16,7 @@ export function FlowShell(props: {
   readonly children: ReactNode;
 }) {
   return (
-    <section className="dl-panel step" aria-label={`${destinationName(props.type)} Setup`}>
+    <section className="dl-panel step" aria-label={`${destinationName(props.type)}设置流程`}>
       <div className="title">
         <h2>
           <DestinationMark type={props.type} size={24} />

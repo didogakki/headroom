@@ -82,9 +82,7 @@ export function SparkBars(props: {
           value={Math.max(0, at)}
           aria-label={label}
           aria-describedby={summaryId}
-          aria-valuetext={
-            focused === undefined ? "No data" : `${focused.label}, ${focused.display}`
-          }
+          aria-valuetext={focused === undefined ? "无数据" : `${focused.label}，${focused.display}`}
           onChange={(event) => point(Number(event.currentTarget.value))}
           onFocus={(event) => {
             if (event.currentTarget.matches(":focus-visible")) setHot(at);
@@ -119,7 +117,7 @@ export function SparkBars(props: {
         })}
       </div>
       <p className="sr" id={summaryId}>
-        {`${label}. ${bars.map((bar) => `${bar.label} ${bar.display}`).join(", ")}.`}
+        {`${label}。${bars.map((bar) => `${bar.label} ${bar.display}`).join("，")}。`}
       </p>
     </figure>
   );

@@ -29,7 +29,7 @@ export const day = 24 * hour;
 /** The filter value for every account; account ids never take this form. */
 const allAccounts = "__all__";
 
-export const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export const weekdays = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"] as const;
 
 /** Width of an element in pixels, kept current. Zero until the first layout. */
 export function useWidth(ref: RefObject<HTMLElement | null>): number {
@@ -186,7 +186,7 @@ export function AccountFilter(props: {
   readonly onChange: (id: string | null) => void;
 }) {
   const options: SelectOption<string>[] = [
-    { value: allAccounts, label: "All Accounts" },
+    { value: allAccounts, label: "全部账户" },
     ...props.accounts.map((account) => ({
       value: account.id,
       label: account.label,
@@ -196,7 +196,7 @@ export function AccountFilter(props: {
   return (
     <div className="an2-filter">
       <Select
-        label="Accounts"
+        label="账户"
         hideLabel
         size="sm"
         value={props.value ?? allAccounts}
@@ -280,7 +280,7 @@ export function UsageLanes(props: {
   return (
     <figure
       className="an2-lanes"
-      aria-label="Usage per window"
+      aria-label="每个窗口的用量"
       style={{ gridTemplateColumns: `${props.gutter}px ${plotWidth}px` }}
     >
       {props.gutter > 0 ? (
@@ -369,8 +369,8 @@ export function UsageLanes(props: {
                           onPointerEnter={() =>
                             props.onHoverWindow?.({
                               big: account.label,
-                              cap: `Peak ${Math.round(curve.peak)} %${curve.current ? " (open)" : ""}${
-                                curve.hitAt === null ? ", never locked" : ", hit the limit"
+                              cap: `峰值${Math.round(curve.peak)}%${curve.current ? "（进行中）" : ""}${
+                                curve.hitAt === null ? "，从未锁定" : "，已触达上限"
                               }`,
                             })
                           }
@@ -473,7 +473,7 @@ export function ViewCard<T extends string>(props: {
 }) {
   const { title, view, onView, views } = props;
   const switcher = useMemo(
-    () => <Segmented label={`${title} view`} value={view} onChange={onView} options={views} />,
+    () => <Segmented label={`${title}视图`} value={view} onChange={onView} options={views} />,
     [title, view, onView, views],
   );
   return (

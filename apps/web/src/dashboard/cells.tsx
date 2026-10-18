@@ -6,6 +6,7 @@ import { displayMeter, toneOf } from "@headroom/view-model/tone";
 import { useNow } from "../lib/now.ts";
 import { ResetCaption } from "../lib/reset-caption.tsx";
 import { When } from "../lib/when.tsx";
+import { zhCaption, zhExact, zhLabel, zhNote, zhUnit, zhWindow } from "../lib/zh.ts";
 import { Bar } from "../ui/bar.tsx";
 import { CountUp } from "../ui/count-up.tsx";
 import { InfoTip } from "../ui/info-tip.tsx";
@@ -13,8 +14,8 @@ import { InfoTip } from "../ui/info-tip.tsx";
 function Label(props: { readonly label: string; readonly window: string | null }) {
   return (
     <div className="label">
-      <span>{props.label}</span>
-      {props.window === null ? null : <span className="window">{props.window}</span>}
+      <span>{zhLabel(props.label)}</span>
+      {props.window === null ? null : <span className="window">{zhWindow(props.window)}</span>}
     </div>
   );
 }
@@ -28,7 +29,7 @@ function Unknown() {
 }
 
 function Unlimited() {
-  return <div className="value">Unlimited</div>;
+  return <div className="value">无限制</div>;
 }
 
 function MeterCell(props: {
@@ -43,13 +44,14 @@ function MeterCell(props: {
     settings.lowThresholdPercent,
     cell.decimals,
   );
-  const name = cell.window === null ? cell.label : `${cell.label} ${cell.window}`;
+  const label = zhLabel(cell.label);
+  const name = cell.window === null ? label : `${label} ${zhWindow(cell.window)}`;
   if (cell.unlimited) {
     return (
       <div className="cell">
         <Label label={cell.label} window={cell.window} />
         <Unlimited />
-        <div className="caption">No limit on this account</div>
+        <div className="caption">此账户没有限制</div>
       </div>
     );
   }
@@ -58,8 +60,8 @@ function MeterCell(props: {
       <div className="cell">
         <Label label={cell.label} window={cell.window} />
         <Unknown />
-        <Bar unknown label={`${name} not reported`} />
-        <div className="caption">Not reported</div>
+        <Bar unknown label={`${name} 未报告`} />
+        <div className="caption">未报告</div>
       </div>
     );
   }
@@ -69,19 +71,19 @@ function MeterCell(props: {
       <Label label={cell.label} window={cell.window} />
       <div className="value">
         <CountUp value={shown.value} decimals={cell.decimals} delay={props.index * 60} />
-        <span className="unit">{shown.unit}</span>
+        <span className="unit">{zhUnit(shown.unit)}</span>
       </div>
       <Bar
         percent={shown.fill}
         tone={shown.tone ?? "good"}
         {...(cell.used === null ? {} : { valueNow: cell.used })}
-        label={`${name} ${cell.used ?? 0}% used`}
+        label={`${name} 已用 ${cell.used ?? 0}%`}
       />
       <div className="caption">
         {toneWord === null ? null : (
           <>
             <span className={`tone ${toneWord === "Running Low" ? "warn" : "bad"}`}>
-              {toneWord}
+              {zhCaption(toneWord)}
             </span>
             {" · "}
           </>
@@ -92,7 +94,7 @@ function MeterCell(props: {
   );
 }
 
-const unitWords = { credits: "credits", usd: "", count: "", requests: "requests" } as const;
+const unitWords = { credits: "积分", usd: "", count: "", requests: "次请求" } as const;
 
 function AmountCell(props: { readonly cell: Extract<Cell, { kind: "amount" }> }) {
   const { cell } = props;
@@ -102,7 +104,7 @@ function AmountCell(props: { readonly cell: Extract<Cell, { kind: "amount" }> })
       <div className="cell fact">
         <Label label={cell.label} window={cell.window} />
         <Unlimited />
-        {cell.note === null ? null : <div className="caption">{cell.note}</div>}
+        {cell.note === null ? null : <div className="caption">{zhNote(cell.note)}</div>}
       </div>
     );
   }
@@ -111,7 +113,7 @@ function AmountCell(props: { readonly cell: Extract<Cell, { kind: "amount" }> })
       <div className="cell fact">
         <Label label={cell.label} window={cell.window} />
         <Unknown />
-        <div className="caption">Not reported</div>
+        <div className="caption">未报告</div>
       </div>
     );
   }
@@ -136,10 +138,10 @@ function AmountCell(props: { readonly cell: Extract<Cell, { kind: "amount" }> })
           thin
           percent={100 - usedPercent}
           tone={tone}
-          label={`${cell.label} ${formatNumber(cell.value, cell.decimals)} left of ${cell.of}`}
+          label={`${zhLabel(cell.label)} 剩余 ${formatNumber(cell.value, cell.decimals)}，共 ${cell.of}`}
         />
       ) : null}
-      {cell.note === null ? null : <div className="caption">{cell.note}</div>}
+      {cell.note === null ? null : <div className="caption">{zhNote(cell.note)}</div>}
     </div>
   );
 }
@@ -154,7 +156,7 @@ function ResetsCell(props: { readonly cell: Extract<Cell, { kind: "resets" }> })
       <div className="cell fact">
         <Label label={cell.label} window={cell.window} />
         <Unknown />
-        <div className="caption">Not reported</div>
+        <div className="caption">未报告</div>
       </div>
     );
   }
@@ -163,19 +165,19 @@ function ResetsCell(props: { readonly cell: Extract<Cell, { kind: "resets" }> })
       <Label label={cell.label} window={cell.window} />
       <div className="value">
         <CountUp value={cell.count} />
-        <span className="of">{cell.count === 1 ? "full reset" : "full resets"}</span>
+        <span className="of">次完整重置</span>
       </div>
       <div className="caption">
         {first === undefined ? (
-          "No expiry reported"
+          "未报告到期时间"
         ) : (
           <>
-            <When at={first} kind="until" prefix="First expires" />
-            <InfoTip label="All reset expiry times">
-              <b>Banked Resets</b>
+            <When at={first} kind="until" prefix="最早" suffix="到期" />
+            <InfoTip label="所有重置的到期时间">
+              <b>已存重置</b>
               {cell.expiries.map((at, index) => (
                 <span key={at}>
-                  {`Reset ${index + 1} · expires ${exactFull(at, now, settings.clock)}`}
+                  {`第 ${index + 1} 次 · ${zhExact(exactFull(at, now, settings.clock))}到期`}
                 </span>
               ))}
             </InfoTip>

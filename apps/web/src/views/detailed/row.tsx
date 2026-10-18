@@ -4,13 +4,13 @@ import type { OverviewConnection } from "../../api.ts";
 import { BrandMark, ChevronDownIcon } from "../../icons.tsx";
 import { isInactive } from "@headroom/view-model/accounts";
 import {
-  accountName,
   awaitingFirstRefresh,
   planLabel,
   providerName,
   statusOf,
 } from "@headroom/view-model/labels";
 import { useNow } from "../../lib/now.ts";
+import { zhAccountName } from "../../lib/zh.ts";
 import { presentPanel } from "@headroom/view-model/present";
 import { When } from "../../lib/when.tsx";
 import { Breakable } from "../../ui/breakable.tsx";
@@ -23,7 +23,7 @@ import { headlineOf, RowLimit, RowReset } from "./limit.tsx";
 function RowStatus(props: { readonly connection: OverviewConnection }) {
   const { connection } = props;
   const status = statusOf(connection);
-  if (awaitingFirstRefresh(connection)) return <StatusPill kind="waiting" label="Waiting" />;
+  if (awaitingFirstRefresh(connection)) return <StatusPill kind="waiting" label="等待中" />;
   if (status.word === "Active" && connection.lastSuccessAt !== null) {
     return <HealthyStatus age={<When at={connection.lastSuccessAt} kind="ago" />} />;
   }
@@ -64,7 +64,7 @@ export function AccountRow(props: {
             <BrandMark provider={connection.provider} />
             <span className="d-titles">
               <span className="d-name">
-                {accountName(connection)}
+                {zhAccountName(connection)}
                 {plan === null ? null : (
                   <span className="plan">
                     <span className="sep" aria-hidden="true">

@@ -2,13 +2,14 @@ import { useState, type FormEvent } from "react";
 
 import type { TopUpInput, TopUpUpdate } from "../../api.ts";
 import type { Provider } from "@headroom/core/contracts";
-import { accountName, groupByProvider, planLabel, providerName } from "@headroom/view-model/labels";
+import { groupByProvider, planLabel, providerName } from "@headroom/view-model/labels";
 import type { OverviewConnection } from "@headroom/view-model/overview";
 import { currencies, parsePositive, type Currency } from "@headroom/view-model/wallet-money";
-import { creditBalanceText, creditsOf, type TopUp } from "@headroom/view-model/wallet";
+import { creditsOf, type TopUp } from "@headroom/view-model/wallet";
 import { expiryAlertDayOptions } from "@headroom/core/contracts";
 
 import { BrandMark } from "../../icons.tsx";
+import { zhAccountName, zhCreditBalance } from "../../lib/zh.ts";
 import { TextField } from "../../shell/delivery/form-parts.tsx";
 import { Button } from "../../ui/button.tsx";
 import { DatePicker } from "../../ui/date-picker.tsx";
@@ -19,15 +20,15 @@ import { Segmented } from "../../ui/segmented.tsx";
 import { Select, type SelectOption } from "../../ui/select.tsx";
 
 const kinds: readonly RadioCard<TopUp["kind"]>[] = [
-  { value: "paid", label: "Paid", description: "You bought these credits." },
-  { value: "free", label: "Free", description: "Promo or bonus credits." },
+  { value: "paid", label: "付费", description: "这些积分是你购买的。" },
+  { value: "free", label: "免费", description: "促销或赠送的积分。" },
 ];
 
 /** The expiry alert as a segment value: "none" or the day count. */
 type AlertChoice = "none" | `${(typeof expiryAlertDayOptions)[number]}`;
 const alertOptions: readonly { readonly value: AlertChoice; readonly label: string }[] = [
-  { value: "none", label: "None" },
-  ...expiryAlertDayOptions.map((days) => ({ value: `${days}` as const, label: `${days} Days` })),
+  { value: "none", label: "不提醒" },
+  ...expiryAlertDayOptions.map((days) => ({ value: `${days}` as const, label: `${days}天` })),
 ];
 
 function alertChoiceOf(days: TopUp["expiryAlertDays"]): AlertChoice {
@@ -48,7 +49,7 @@ function accountOptions(
       const plan = planLabel(connection.plan);
       return {
         value: connection.id,
-        label: accountName(connection),
+        label: zhAccountName(connection),
         icon: <BrandMark provider={connection.provider} />,
         group: providerName(group.provider),
         ...(plan === null ? {} : { meta: plan }),
@@ -108,12 +109,12 @@ function TopUpForm(props: {
     const next: { amount?: string; credits?: string; date?: string; expiry?: string } = {};
     const priced = price.minor !== null && price.minor > 0;
     if (kind === "paid" && !priced && !(priceOptional && price.minor === null)) {
-      next.amount = "Enter an amount above zero.";
+      next.amount = "请输入大于零的金额。";
     }
-    if (credits.trim() !== "" && added === null) next.credits = "Enter a number above zero.";
-    if (date === null) next.date = "Pick a date.";
+    if (credits.trim() !== "" && added === null) next.credits = "请输入大于零的数字。";
+    if (date === null) next.date = "请选择日期。";
     if (date !== null && expiresOn !== null && expiresOn < date) {
-      next.expiry = "Pick a day on or after the top-up date.";
+      next.expiry = "请选择不早于充值日期的日期。";
     }
     setErrors(next);
     if (Object.keys(next).length > 0 || connectionId === "" || date === null) return;
@@ -147,7 +148,7 @@ function TopUpForm(props: {
       <div className="dsec">
         {editing === null ? (
           <Select
-            label="Account"
+            label="账户"
             value={connectionId === "" ? null : connectionId}
             options={options}
             onChange={setConnectionId}
@@ -155,18 +156,18 @@ function TopUpForm(props: {
         ) : (
           <p className="w-desc">
             {chosen === undefined
-              ? "Removed account"
-              : `${providerName(chosen.provider)} · ${accountName(chosen)}`}
+              ? "已删除的账户"
+              : `${providerName(chosen.provider)} · ${zhAccountName(chosen)}`}
             {editing.source === "detected" ? (
-              <span className="muted"> · Detected automatically from a balance change.</span>
+              <span className="muted"> · 由 Headroom 根据余额变化自动检测。</span>
             ) : null}
           </p>
         )}
         {balance === null ? null : (
-          <p className="w-balance muted">Balance: {creditBalanceText(balance)}</p>
+          <p className="w-balance muted">余额：{zhCreditBalance(balance)}</p>
         )}
         <DatePicker
-          label="Date"
+          label="日期"
           value={date}
           error={errors.date ?? null}
           onChange={(next) => {
@@ -175,7 +176,7 @@ function TopUpForm(props: {
           }}
         />
         <RadioCards
-          label="Kind of top-up"
+          label="充值类型"
           hideLabel
           layout="grid"
           value={kind}
@@ -187,12 +188,12 @@ function TopUpForm(props: {
         />
         {kind === "paid" ? (
           <MoneyInput
-            label="Amount"
+            label="金额"
             minor={price.minor}
             currency={price.currency}
             currencies={currencies}
             error={errors.amount ?? null}
-            {...(priceOptional ? { hint: "Leave empty until you know the price." } : {})}
+            {...(priceOptional ? { hint: "在你知道价格之前可以留空。" } : {})}
             onChange={(next) => {
               setPrice(next);
               setErrors({});
@@ -200,7 +201,7 @@ function TopUpForm(props: {
           />
         ) : null}
         <TextField
-          label="Credits Added (Optional)"
+          label="增加的积分（可选）"
           value={credits}
           inputMode="decimal"
           error={errors.credits ?? null}
@@ -209,9 +210,9 @@ function TopUpForm(props: {
             setErrors({});
           }}
         />
-        <TextField label="Note (Optional)" value={note} onChange={setNote} />
+        <TextField label="备注（可选）" value={note} onChange={setNote} />
         <DatePicker
-          label="Expires On (Optional)"
+          label="到期日（可选）"
           optional
           value={expiresOn}
           {...(date === null ? {} : { min: date })}
@@ -223,10 +224,10 @@ function TopUpForm(props: {
           }}
         />
         <div className="field fld">
-          <span className="fld-label">Alert Before Expiry</span>
+          <span className="fld-label">到期前提醒</span>
           <Segmented
             full
-            label="Alert before expiry"
+            label="到期前提醒"
             value={expiresOn === null ? "none" : alert}
             options={alertOptions}
             disabled={expiresOn === null}
@@ -236,20 +237,20 @@ function TopUpForm(props: {
       </div>
       {failed ? (
         <p className="w-save-error" role="alert">
-          Could not save. Nothing was changed.
+          无法保存，未做任何更改。
         </p>
       ) : null}
       <div className="w-foot">
         <Button disabled={pending} onClick={props.onCancel}>
-          Cancel
+          取消
         </Button>
         <Button
           variant="primary"
           type="submit"
           busy={pending}
-          busyLabel={editing === null ? "Adding" : "Saving"}
+          busyLabel={editing === null ? "正在添加" : "正在保存"}
         >
-          {editing === null ? "Add Top-Up" : "Save Top-Up"}
+          {editing === null ? "添加充值" : "保存充值"}
         </Button>
       </div>
     </form>
@@ -281,7 +282,7 @@ export function TopUpDialog(props: {
     <Dialog
       open={props.open}
       onClose={onClose}
-      title={props.editing === null ? "Add Top-Up" : "Edit Top-Up"}
+      title={props.editing === null ? "添加充值" : "编辑充值"}
     >
       {props.open ? (
         <TopUpForm

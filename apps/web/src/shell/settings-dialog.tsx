@@ -7,6 +7,7 @@ import { useDevicePrefs } from "../lib/device-prefs.ts";
 import { isDemoSite } from "../lib/site.ts";
 import { useSettings } from "../lib/settings.tsx";
 import type { SettingsPatch } from "../lib/settings-store.ts";
+import { zhMessage } from "../lib/zh.ts";
 import { Dialog } from "../ui/dialog.tsx";
 import { ErrorNotice } from "../ui/error-notice.tsx";
 import { Segmented } from "../ui/segmented.tsx";
@@ -19,6 +20,14 @@ import { ExchangeRatesSection } from "./exchange-rates-section.tsx";
 import { ProviderCards } from "./provider-cards.tsx";
 import { ProvidersTab } from "./providers-tab.tsx";
 import { Body, Section, SwitchRow, WaitingContext } from "./settings-rows.tsx";
+
+/** The placeholder width of a segment: 7px a Latin letter, 13px a Chinese character, and the padding. */
+function labelWidth(label: string): number {
+  return Array.from(label).reduce(
+    (sum, char) => sum + ((char.codePointAt(0) ?? 0) > 0x2e80 ? 13 : 7),
+    20,
+  );
+}
 
 function ChoiceRow<T extends string>(props: {
   readonly title: string;
@@ -36,7 +45,7 @@ function ChoiceRow<T extends string>(props: {
           {props.options.map((option) => (
             <Sk
               key={option.value}
-              width={option.label.length * 7 + 20}
+              width={labelWidth(option.label)}
               height={26}
               className="sk-pill"
             />
@@ -82,12 +91,12 @@ const intervals = [5, 10, 15, 30] as const;
 const retentions = [30, 90, 180, 365] as const;
 
 const tabs = [
-  { value: "general", label: "General" },
-  { value: "providers", label: "Providers" },
-  { value: "notifications", label: "Notifications" },
-  { value: "automations", label: "Automations" },
-  { value: "channels", label: "Channels" },
-  { value: "privacy", label: "Privacy" },
+  { value: "general", label: "常规" },
+  { value: "providers", label: "服务商" },
+  { value: "notifications", label: "通知" },
+  { value: "automations", label: "自动化" },
+  { value: "channels", label: "渠道" },
+  { value: "privacy", label: "隐私" },
 ] as const;
 
 /** The tabs of the dialog. */
@@ -98,72 +107,72 @@ function General(props: { readonly change: (patch: SettingsPatch) => void }) {
   const { change } = props;
   return (
     <>
-      <Section title="Limits">
+      <Section title="额度">
         <NumberRow
-          title="Running Low Under"
-          note="Bars turn amber below this. Red means under 10%."
+          title="余量偏低阈值"
+          note="剩余额度低于此值时，进度条变为琥珀色；低于 10% 时变为红色。"
           value={settings.lowThresholdPercent}
           values={thresholds}
           format={(value) => `${value}%`}
           onChange={(lowThresholdPercent) => change({ lowThresholdPercent })}
         />
       </Section>
-      <Section title="Refresh">
+      <Section title="刷新">
         <NumberRow
-          title="Refresh Every"
-          note="How often your accounts update."
+          title="刷新间隔"
+          note="账户更新的频率。"
           value={settings.refreshIntervalMinutes}
           values={intervals}
-          format={(value) => `${value} min`}
+          format={(value) => `${value}分钟`}
           onChange={(refreshIntervalMinutes) => change({ refreshIntervalMinutes })}
         />
       </Section>
-      <Section title="Data">
+      <Section title="数据">
         <NumberRow
-          title="History"
-          note="Older refresh history is deleted. The latest reading of each account is always kept."
+          title="历史记录"
+          note="更早的刷新历史会被删除。每个账户的最新读数始终保留。"
           value={settings.historyRetentionDays}
           values={retentions}
-          format={(value) => (value === 365 ? "1 year" : `${value} days`)}
+          format={(value) => (value === 365 ? "1年" : `${value}天`)}
           onChange={(historyRetentionDays) => change({ historyRetentionDays })}
         />
       </Section>
-      <Section title="Time">
+      <Section title="时间">
         <ChoiceRow
-          title="Times"
-          note="“In 52 min” or “at 15:06”."
+          title="时间显示"
+          note="显示为“52分钟后”或“15:06”。"
           value={settings.timeStyle}
           options={[
-            { value: "countdown", label: "Countdown" },
-            { value: "exact", label: "Exact" },
+            { value: "countdown", label: "倒计时" },
+            { value: "exact", label: "精确时间" },
           ]}
           onChange={(timeStyle) => change({ timeStyle })}
         />
         <ChoiceRow
-          title="Clock"
-          note="15:06 or 3:06 PM."
+          title="时钟"
+          note="15:06 或 下午3:06。"
           value={settings.clock}
           options={[
-            { value: "24h", label: "24-Hour" },
-            { value: "12h", label: "12-Hour" },
+            { value: "24h", label: "24小时制" },
+            { value: "12h", label: "12小时制" },
           ]}
           onChange={(clock) => change({ clock })}
         />
       </Section>
-      <Section title="Display">
+      <Section title="显示">
         <ChoiceRow
-          title="Density"
-          note="Compact fits more on screen."
+          title="密度"
+          note="紧凑模式可在屏幕上显示更多内容。"
           value={settings.density}
           options={[
-            { value: "comfortable", label: "Comfortable" },
-            { value: "compact", label: "Compact" },
+            { value: "comfortable", label: "舒适" },
+            { value: "compact", label: "紧凑" },
           ]}
           onChange={(density) => change({ density })}
         />
         <SwitchRow
-          title="Keep Inactive Last"
-          note="Paused and disconnected stay at the bottom."
+          title="非活动账户置底"
+          note="已暂停和已断开的账户保持在底部。"
           checked={settings.keepInactiveLast}
           onChange={(keepInactiveLast) => change({ keepInactiveLast })}
         />
@@ -181,16 +190,16 @@ function Privacy() {
     <Section>
       <SwitchRow
         device
-        title="Privacy Mode"
-        note="Blur emails and usernames until you hover them. Saved on this device."
+        title="隐私模式"
+        note="模糊邮箱和用户名，悬停时才会显示。保存在此设备上。"
         checked={prefs.privacy}
         onChange={prefs.setPrivacy}
       />
       {isDemoSite ? null : (
         <SwitchRow
           device
-          title="Demo Mode"
-          note="Show made-up accounts, figures and notifications, for screenshots and screen sharing. Saved on this device."
+          title="演示模式"
+          note="显示虚构的账户、数据和通知，用于截图和屏幕共享。保存在此设备上。"
           checked={prefs.demo}
           onChange={prefs.setDemo}
         />
@@ -208,67 +217,67 @@ const kindGroups: readonly {
   readonly rows: readonly { readonly kind: Kind; readonly title: string; readonly note: string }[];
 }[] = [
   {
-    title: "Balances and Credits",
+    title: "余额与积分",
     rows: [
       {
         kind: "balance_low",
-        title: "Balance Low",
-        note: "When a credit balance runs low, or Claude credits run out.",
+        title: "余额偏低",
+        note: "积分余额偏低，或 Claude 积分用完时。",
       },
       {
         kind: "top_up_detected",
-        title: "Top-Up Detected",
-        note: "When a credit balance goes up.",
+        title: "检测到充值",
+        note: "积分余额增加时。",
       },
       {
         kind: "credits_expiring",
-        title: "Credits Expiring",
-        note: "Before Wallet or Claude credits expire.",
+        title: "积分即将到期",
+        note: "钱包或 Claude 积分到期之前。",
       },
     ],
   },
   {
-    title: "Spend",
+    title: "支出",
     rows: [
       {
         kind: "extra_usage_started",
-        title: "On-Demand Started",
-        note: "When an account starts using paid on-demand or extra usage, including Copilot.",
+        title: "开始按需使用",
+        note: "账户开始使用付费的按需用量或额外用量时（包括 Copilot）。",
       },
       {
         kind: "spend_near_cap",
-        title: "Near Spending Cap",
-        note: "When spend gets close to the cap the provider set.",
+        title: "接近支出上限",
+        note: "支出接近服务商设置的上限时。",
       },
       {
         kind: "spend_cap_reached",
-        title: "Spending Cap Reached",
-        note: "When spend hits the cap the provider set.",
+        title: "已达支出上限",
+        note: "支出达到服务商设置的上限时。",
       },
       {
         kind: "budget_near",
-        title: "Near Your Budget",
-        note: "When spend gets close to a budget you set under Automations.",
+        title: "接近你的预算",
+        note: "支出接近你在“自动化”中设置的预算时。",
       },
       {
         kind: "budget_exceeded",
-        title: "Over Your Budget",
-        note: "When spend passes a budget you set under Automations.",
+        title: "超出你的预算",
+        note: "支出超过你在“自动化”中设置的预算时。",
       },
     ],
   },
   {
-    title: "Sign-In",
+    title: "登录",
     rows: [
       {
         kind: "refresh_failed",
-        title: "Refresh Failed",
-        note: "When an account fails to update twice in a row.",
+        title: "刷新失败",
+        note: "账户连续两次更新失败时。",
       },
       {
         kind: "disconnected",
-        title: "Disconnected",
-        note: "When a sign-in expires and the account needs to be reconnected.",
+        title: "已断开",
+        note: "登录过期、账户需要重新连接时。",
       },
     ],
   },
@@ -301,57 +310,57 @@ function Notifications(props: {
     });
   return (
     <>
-      <Section title="Limits">
+      <Section title="额度">
         {kindRow({
           kind: "running_low",
-          title: "Running Low",
-          note: "When a limit has little left, by your low-limit threshold.",
+          title: "余量偏低",
+          note: "额度剩余不多时（按你设置的阈值）。",
         })}
         {kindRow({
           kind: "almost_out",
-          title: "Almost Out",
-          note: "When a limit has under 10% left.",
+          title: "即将耗尽",
+          note: "额度剩余不足 10% 时。",
         })}
         {kindRow({
           kind: "pacing",
-          title: "Running Out Early",
-          note: "When a weekly limit's pace would use it up at least a day before it resets.",
+          title: "将提前用完",
+          note: "按当前速度，每周额度会在重置前至少一天用完时。",
         })}
         <SwitchRow
-          title="Include 5-Hour Sessions"
-          note="Off keeps weekly and monthly limits only."
+          title="包含 5 小时会话"
+          note="关闭后只提醒每周和每月额度。"
           checked={on.includeSessions}
           onChange={(includeSessions) => props.change({ notifications: { includeSessions } })}
         />
       </Section>
-      <Section title="Resets">
+      <Section title="重置">
         {kindRow({
           kind: "reset_expiring",
-          title: "Expiring Reset",
-          note: "When a banked reset is about to expire.",
+          title: "重置即将到期",
+          note: "已存重置即将到期时。",
         })}
         <NumberRow
-          title="Reset Warning"
-          note="How early to warn before a banked reset or Claude credits expire."
+          title="到期提前提醒"
+          note="已存重置或 Claude 积分到期前，提前多久提醒。"
           value={on.resetLeadDays}
           values={leadDays}
-          format={(value) => `${value} ${value === 1 ? "Day" : "Days"}`}
+          format={(value) => `${value}天`}
           onChange={(resetLeadDays) => props.change({ notifications: { resetLeadDays } })}
         />
         {kindRow({
           kind: "reset_granted",
-          title: "New Banked Reset",
-          note: "When an account banks a new reset.",
+          title: "新增已存重置",
+          note: "账户新增一次已存重置时。",
         })}
         {kindRow({
           kind: "early_reset",
-          title: "Early Reset",
-          note: "When a limit resets before its scheduled time.",
+          title: "提前重置",
+          note: "额度在计划时间之前重置时。",
         })}
         {kindRow({
           kind: "auto_reset",
-          title: "Auto-Reset Result",
-          note: "When Headroom uses a banked reset for you, or tries and fails.",
+          title: "自动重置结果",
+          note: "Headroom 替你使用已存重置，或尝试失败时。",
         })}
       </Section>
       {kindGroups.map((group) => (
@@ -359,7 +368,7 @@ function Notifications(props: {
           {group.rows.map(kindRow)}
         </Section>
       ))}
-      <Section title="Providers">
+      <Section title="服务商">
         <ProviderCards
           providers={props.providers}
           muted={on.mutedProviders}
@@ -373,10 +382,10 @@ function Notifications(props: {
 function AccountActions(props: { readonly change: (patch: SettingsPatch) => void }) {
   const { settings } = useSettings();
   return (
-    <Section title="Account Actions">
+    <Section title="账户操作">
       <SwitchRow
-        title="Allow Account Actions"
-        note="Lets the hold button use a Codex reset."
+        title="允许账户操作"
+        note="允许长按按钮使用 Codex 的重置。"
         checked={settings.accountActions}
         onChange={(accountActions) => props.change({ accountActions })}
       />
@@ -418,17 +427,17 @@ export function SettingsDialog(props: {
   };
   const change = (patch: SettingsPatch): void => void store.update(patch);
   return (
-    <Dialog open={props.open} onClose={props.onClose} title="Settings" variant="settings">
+    <Dialog open={props.open} onClose={props.onClose} title="设置" variant="settings">
       {loadFailed ? (
         <section className="dsec">
           <ErrorNotice inline busy={retrying} onRetry={retry}>
-            Headroom could not load your settings. Check that it is running and try again.
+            Headroom 无法加载你的设置。请确认 Headroom 服务正在运行，然后重试。
           </ErrorNotice>
         </section>
       ) : (
         <WaitingContext value={!loaded}>
           <Tabs
-            label="Settings"
+            label="设置"
             className="stabs"
             tabClassName="stab"
             indicator
@@ -446,7 +455,7 @@ export function SettingsDialog(props: {
             {store.error === null ? null : (
               <section className="dsec">
                 <p className="form-error" role="alert">
-                  {store.error}
+                  {zhMessage(store.error)}
                 </p>
               </section>
             )}

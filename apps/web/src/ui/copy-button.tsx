@@ -38,11 +38,11 @@ export function CopyButton(props: {
 }) {
   const { value, label, size = "md", iconOnly = false } = props;
   const { phase, copy } = useCopyFeedback();
-  const text = phase === "copied" ? "Copied" : phase === "error" ? "Failed" : label;
+  const text = phase === "copied" ? "已复制" : phase === "error" ? "失败" : label;
   const face =
     phase === "copied" ? <DrawnCheck /> : phase === "error" ? <AlertIcon /> : <CopyIcon />;
   const status =
-    phase === "idle" ? "" : phase === "error" ? `${label}: could not copy` : `${label}: copied`;
+    phase === "idle" ? "" : phase === "error" ? `${label}：复制失败` : `${label}：已复制`;
   return (
     <>
       <button
@@ -59,7 +59,7 @@ export function CopyButton(props: {
         </span>
         {iconOnly ? null : (
           <span className="text-cell">
-            {[label, "Copied", "Failed"].map((entry) => (
+            {[label, "已复制", "失败"].map((entry) => (
               <span key={entry} className="measure" aria-hidden="true">
                 {entry}
               </span>

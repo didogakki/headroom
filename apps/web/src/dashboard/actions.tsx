@@ -5,6 +5,7 @@ import { CheckIcon, PauseIcon, PlayIcon, RetryIcon } from "../icons.tsx";
 import { connectionBusyMessage, isConnectionBusy } from "../lib/connection-busy.ts";
 import { useDevicePrefs } from "../lib/device-prefs.ts";
 import { isDemoSite } from "../lib/site.ts";
+import { zhMessage } from "../lib/zh.ts";
 import { ActionButton } from "../ui/action-button.tsx";
 import { Button } from "../ui/button.tsx";
 import { Spinner } from "../ui/spinner.tsx";
@@ -35,7 +36,7 @@ export function PanelActions(props: {
   const { id, paused, signedIn, onChanged, onDisconnected } = props;
   // In Demo Mode the server is never asked, and every change is refused; the failed faces say why.
   const { demo } = useDevicePrefs();
-  const failedWord = demo ? "Demo Mode" : "Failed";
+  const failedWord = demo ? "演示模式" : "失败";
   const [disconnect, setDisconnect] = useState<DisconnectPhase>("closed");
   /** The last disconnect failed because a refresh was running; the failed face says so. */
   const [busy, setBusy] = useState(false);
@@ -114,9 +115,9 @@ export function PanelActions(props: {
             variant="quiet"
             size="sm"
             icon={paused ? <PlayIcon /> : <PauseIcon />}
-            label={paused ? "Resume" : "Pause"}
-            pendingLabel={paused ? "Resuming" : "Pausing"}
-            successLabel={paused ? "Paused" : "Resumed"}
+            label={paused ? "恢复" : "暂停"}
+            pendingLabel={paused ? "正在恢复" : "正在暂停"}
+            successLabel={paused ? "已恢复" : "已暂停"}
             failedLabel={failedWord}
             onAction={runPause}
           />
@@ -124,9 +125,9 @@ export function PanelActions(props: {
             variant="quiet"
             size="sm"
             icon={<RetryIcon />}
-            label="Refresh"
-            pendingLabel="Refreshing"
-            successLabel="Refreshed"
+            label="刷新"
+            pendingLabel="正在刷新"
+            successLabel="已刷新"
             failedLabel={failedWord}
             onAction={runRefresh}
           />
@@ -139,44 +140,44 @@ export function PanelActions(props: {
           data-disconnect=""
           onClick={() => setDisconnect("asking")}
         >
-          Disconnect
+          断开连接
         </Button>
       ) : (
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape cancels the question from any control inside it
-        <fieldset className="confirm" aria-label="Confirm disconnect" onKeyDown={onAskKey}>
+        <fieldset className="confirm" aria-label="确认断开连接" onKeyDown={onAskKey}>
           {disconnect === "asking" ? (
             <>
-              <span className="q">Disconnect?</span>
+              <span className="q">断开连接？</span>
               <button ref={cancel} className="btn sm" type="button" onClick={closeAsk}>
-                Cancel
+                取消
               </button>
               <button className="btn sm primary" type="button" onClick={() => void runDisconnect()}>
-                Disconnect
+                断开连接
               </button>
             </>
           ) : (
             <output className="q">
               {disconnect === "working" ? (
                 <>
-                  <Spinner /> Disconnecting
+                  <Spinner /> 正在断开连接
                 </>
               ) : disconnect === "done" ? (
                 <>
-                  <CheckIcon /> Disconnected
+                  <CheckIcon /> 已断开连接
                 </>
               ) : demo ? (
                 isDemoSite ? (
-                  "Demo Only"
+                  "仅限演示"
                 ) : (
-                  "Turn Off Demo Mode"
+                  "请关闭演示模式"
                 )
               ) : busy ? (
                 // The pill is one short line, so the full note is the hover text and the spoken text.
-                <span title={connectionBusyMessage}>
-                  Refresh Running<span className="sr"> - {connectionBusyMessage}</span>
+                <span title={zhMessage(connectionBusyMessage)}>
+                  正在刷新<span className="sr"> - {zhMessage(connectionBusyMessage)}</span>
                 </span>
               ) : (
-                "Could Not Disconnect"
+                "无法断开连接"
               )}
             </output>
           )}

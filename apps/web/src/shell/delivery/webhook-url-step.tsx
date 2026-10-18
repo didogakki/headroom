@@ -38,11 +38,11 @@ export function WebhookUrlStep(props: {
       />
       <div className="dl-actions">
         <Button type="submit" variant="primary" disabled={url.trim() === ""}>
-          Continue
+          继续
         </Button>
         {props.onCancel === null ? null : (
           <Button variant="quiet" onClick={props.onCancel}>
-            Cancel
+            取消
           </Button>
         )}
       </div>

@@ -23,6 +23,19 @@ import { useHistory } from "./use-history.ts";
 import "./analytics.css";
 import "./common.css";
 
+// The shared empty and error states take their words as props; this page shows them in Chinese.
+const loadFailedText = {
+  staleText: "无法刷新，正在显示上一次成功加载的数据。",
+  failedText: "Headroom 无法加载你的账户。请确认 Headroom 服务正在运行，然后重试。",
+  retryLabel: "重试",
+  retryBusyLabel: "正在重试",
+};
+const noAccountsText = {
+  title: "尚未连接账户",
+  body: "连接服务商账户后，它的额度、余额和重置时间会在一分钟内显示在这里。",
+  action: "连接账户",
+};
+
 /**
  * Analytics: three questions, one card each. Rhythm: when limits are used and where they ran out. Right
  * now: what runs out before its reset. Plan fit: the changes worth making. Each card switches between views of
@@ -38,7 +51,7 @@ export function AnalyticsPage(props: ViewProps) {
   };
   if (connections === null) {
     return failed ? (
-      <LoadFailed stale={false} busy={retrying} onRetry={retry} />
+      <LoadFailed stale={false} busy={retrying} onRetry={retry} {...loadFailedText} />
     ) : (
       <AnalyticsSkeleton />
     );
@@ -47,13 +60,13 @@ export function AnalyticsPage(props: ViewProps) {
   if (connections.length === 0) {
     return (
       <div className="reveal">
-        <NoAccounts />
+        <NoAccounts {...noAccountsText} />
       </div>
     );
   }
   return (
     <div className="reveal an-page">
-      {stale ? <LoadFailed stale busy={retrying} onRetry={retry} /> : null}
+      {stale ? <LoadFailed stale busy={retrying} onRetry={retry} {...loadFailedText} /> : null}
       <AnalyticsBoard connections={connections} />
     </div>
   );
@@ -77,20 +90,17 @@ function monthlyUsd(
   perUsd: Readonly<Partial<Record<string, number>>> | null,
   walletFailed: boolean,
 ): { readonly usd: number | null; readonly note: string } {
-  if (walletFailed) return { usd: null, note: "Price unavailable" };
+  if (walletFailed) return { usd: null, note: "价格不可用" };
   // A free plan, or one included in another subscription, is a known $0: monthlyOf returns zero for it.
   const monthly = monthlyOf(cost);
-  if (monthly === null) return { usd: null, note: "Price not set" };
+  if (monthly === null) return { usd: null, note: "未设置价格" };
   const usd = convert(monthly, "USD", perUsd ?? {});
   return usd === null
-    ? { usd: null, note: `Price in ${monthly.currency}, no rate` }
+    ? { usd: null, note: `价格以 ${monthly.currency} 计，无汇率` }
     : { usd: usd.minor / 100, note: "" };
 }
 
-const wholeDays = (days: number): string => {
-  const count = Math.floor(days);
-  return `${count} ${count === 1 ? "day" : "days"}`;
-};
+const wholeDays = (days: number): string => `${Math.floor(days)}天`;
 
 /** One quiet line when history is thin or the server keeps less than the longest range. */
 function historyNote(coverageDays: number | null, retentionDays: number): string | null {
@@ -101,21 +111,21 @@ function historyNote(coverageDays: number | null, retentionDays: number): string
   if (thin) {
     parts.push(
       coverageDays < 1
-        ? "Less than a day of history so far."
-        : `${wholeDays(coverageDays)} of history so far.`,
+        ? "目前不足1天的历史记录。"
+        : `目前已有${wholeDays(coverageDays)}的历史记录。`,
     );
   }
-  if (short) parts.push(`History keeps ${retentionDays} days.`);
+  if (short) parts.push(`历史记录保留${retentionDays}天。`);
   if (thin && coverageDays < retentionDays) {
-    parts.push("Charts fill in as Headroom keeps reading your limits.");
+    parts.push("Headroom 持续读取你的额度后，图表会逐渐丰富。");
   }
-  return parts.join(" ");
+  return parts.join("");
 }
 
 const clock = (at: number): string =>
   new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-const emptyCards = ["Rhythm", "Right Now", "Plan Fit"] as const;
+const emptyCards = ["节律", "此刻", "套餐适配"] as const;
 
 function AnalyticsBoard(props: { readonly connections: Connections }) {
   const { connections } = props;
@@ -171,12 +181,14 @@ function AnalyticsBoard(props: { readonly connections: Connections }) {
     return (
       <ErrorNotice
         busy={retrying}
+        retryLabel="重试"
+        retryBusyLabel="正在重试"
         onRetry={() => {
           setRetrying(true);
           void reload().finally(() => setRetrying(false));
         }}
       >
-        Headroom could not load your usage history. Check that it is running and try again.
+        Headroom 无法加载你的用量历史。请确认 Headroom 服务正在运行，然后重试。
       </ErrorNotice>
     );
   }
@@ -184,12 +196,12 @@ function AnalyticsBoard(props: { readonly connections: Connections }) {
   const note = [
     historyNote(analytics.history.coverageDays, analytics.history.retentionDays),
     state.kind === "ready" && state.refreshFailedAfter !== null
-      ? `Showing history from ${clock(state.refreshFailedAfter)}. Refresh failed.`
+      ? `当前显示的是 ${clock(state.refreshFailedAfter)} 的历史记录，刷新失败。`
       : null,
-    wallet.loadFailed ? "Prices did not load, so costs and savings are unknown." : null,
+    wallet.loadFailed ? "价格未能加载，因此费用与节省金额未知。" : null,
   ]
     .filter((line): line is string => line !== null)
-    .join(" ");
+    .join("");
   if (analytics.history.empty || analytics.accounts.length === 0) {
     return (
       <>
@@ -197,8 +209,8 @@ function AnalyticsBoard(props: { readonly connections: Connections }) {
           <section className="an2-card" aria-label={title} key={title}>
             <p className="an-empty">
               {analytics.history.empty
-                ? "No history yet. Headroom reads your limits every few minutes; check back in a day."
-                : "No limits to chart yet. Analytics charts usage limits. Your accounts report money only."}
+                ? "暂无历史记录。Headroom 每隔几分钟读取一次你的额度，请一天后再来查看。"
+                : "暂无可绘制的额度。分析页绘制的是用量额度，而你的账户只报告金额。"}
             </p>
           </section>
         ))}

@@ -82,11 +82,16 @@ export function TestStep(props: {
         </Result>
         <Problem>{problem}</Problem>
         <div className="dl-actions">
-          <Button variant="primary" busy={saving} busyLabel="Saving" onClick={() => void finish()}>
+          <Button
+            variant="primary"
+            busy={saving}
+            busyLabel="正在保存"
+            onClick={() => void finish()}
+          >
             {props.finishLabel}
           </Button>
-          <Button variant="quiet" busy={sending} busyLabel="Sending" onClick={() => void send()}>
-            Send Again
+          <Button variant="quiet" busy={sending} busyLabel="正在发送" onClick={() => void send()}>
+            再发送一次
           </Button>
         </div>
       </>
@@ -95,18 +100,23 @@ export function TestStep(props: {
   if (phase.kind === "failed") {
     return (
       <>
-        <Result ok={false} title={phase.demo ? "Demo Only" : "Test Failed"}>
+        <Result ok={false} title={phase.demo ? "仅限演示" : "测试失败"}>
           {phase.text}
         </Result>
         <Problem>{problem}</Problem>
         <div className="dl-actions">
           <Button variant="primary" onClick={back}>
-            Back
+            返回
           </Button>
           {/* A save is refused for the same reason as the test. */}
           {props.saveAnyway === true && !phase.demo ? (
-            <Button variant="quiet" busy={saving} busyLabel="Saving" onClick={() => void finish()}>
-              Save Anyway
+            <Button
+              variant="quiet"
+              busy={saving}
+              busyLabel="正在保存"
+              onClick={() => void finish()}
+            >
+              仍然保存
             </Button>
           ) : null}
         </div>
@@ -117,17 +127,17 @@ export function TestStep(props: {
     <>
       <p className="secondary dl-lead">{props.lead}</p>
       <SwitchRow
-        title="Include Account Email"
-        note="Adds the email or login of each account."
+        title="包含账户邮箱"
+        note="附上每个账户的邮箱或登录名。"
         checked={props.identity}
         onChange={props.onIdentity}
       />
       <div className="dl-actions">
-        <Button variant="primary" busy={sending} busyLabel="Sending" onClick={() => void send()}>
+        <Button variant="primary" busy={sending} busyLabel="正在发送" onClick={() => void send()}>
           {props.sendLabel}
         </Button>
         <Button variant="quiet" disabled={sending} onClick={back}>
-          Back
+          返回
         </Button>
       </div>
     </>

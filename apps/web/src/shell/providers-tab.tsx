@@ -13,8 +13,8 @@ import "./providers-tab.css";
 const balanceChoices: Partial<Record<Provider, { readonly title: string; readonly note: string }>> =
   {
     claude: {
-      title: "Hide Credits at $0",
-      note: "Any credit balance hides while it is $0 and shows again once it is above.",
+      title: "积分为 $0 时隐藏",
+      note: "任何积分余额为 $0 时会隐藏，高于 $0 后重新显示。",
     },
   };
 
@@ -27,8 +27,8 @@ export function ProvidersTab(props: {
   const shown = props.providers.filter((provider) => balanceChoices[provider] !== undefined);
   if (shown.length === 0) {
     return (
-      <Section title="Providers">
-        <p className="prov-empty muted">None of your connected providers has display options.</p>
+      <Section title="服务商">
+        <p className="prov-empty muted">你已连接的服务商都没有可调整的显示选项。</p>
       </Section>
     );
   }

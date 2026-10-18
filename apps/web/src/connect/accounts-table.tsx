@@ -4,15 +4,10 @@ import type { Provider } from "@headroom/core/contracts";
 
 import { api, isDemoRefusal, type OverviewConnection } from "../api.ts";
 import { BrandMark, UserIcon } from "../icons.tsx";
-import {
-  accountName,
-  groupByProvider,
-  planLabel,
-  providerName,
-  statusOf,
-} from "@headroom/view-model/labels";
+import { groupByProvider, planLabel, providerName, statusOf } from "@headroom/view-model/labels";
 import { connectionBusyMessage, isConnectionBusy } from "../lib/connection-busy.ts";
 import { messageOf } from "../lib/load.ts";
+import { zhAccountName, zhMessage } from "../lib/zh.ts";
 import {
   applyOrder,
   moveAccount,
@@ -39,36 +34,34 @@ function Tally(props: { readonly connections: readonly OverviewConnection[] }) {
   const active = connections.length - paused - disconnected;
   const total = connections.length;
   const spoken = [
-    `${active} active`,
-    paused > 0 ? `${paused} paused` : null,
-    disconnected > 0 ? `${disconnected} disconnected` : null,
+    `${active} 个正常`,
+    paused > 0 ? `${paused} 个已暂停` : null,
+    disconnected > 0 ? `${disconnected} 个已断开` : null,
   ]
     .filter((part) => part !== null)
-    .join(", ");
+    .join("，");
   return (
-    <span className="tally" aria-label={`${total} accounts: ${spoken}`}>
+    <span className="tally" aria-label={`${total} 个账户：${spoken}`}>
       {active > 0 ? (
         <span className="tally-item">
           <span className="tdot good" />
-          {active} Active
+          {active} 个正常
         </span>
       ) : null}
       {paused > 0 ? (
         <span className="tally-item">
           <span className="tdot quiet" />
-          {paused} Paused
+          {paused} 个已暂停
         </span>
       ) : null}
       {disconnected > 0 ? (
         <span className="tally-item">
           <span className="tdot bad" />
-          {disconnected} Disconnected
+          {disconnected} 个已断开
         </span>
       ) : null}
       <span className="tally-sep" aria-hidden="true" />
-      <span className="tally-item total">
-        {total} {total === 1 ? "Account" : "Accounts"}
-      </span>
+      <span className="tally-item total">{total} 个账户</span>
     </span>
   );
 }
@@ -108,7 +101,7 @@ function RenameInput(props: {
     <input
       ref={ref}
       className="name-edit"
-      aria-label="Account name"
+      aria-label="账户名称"
       maxLength={40}
       value={value}
       onChange={(event) => setValue(event.target.value)}
@@ -128,7 +121,7 @@ function AccountRow(props: {
   readonly handle: ReactNode;
 }) {
   const { connection } = props;
-  const name = accountName(connection);
+  const name = zhAccountName(connection);
   const plan = planLabel(connection.plan);
   const status = statusOf(connection);
   return (
@@ -150,7 +143,7 @@ function AccountRow(props: {
         )}
         <span className="twho">
           {connection.identity === null || connection.identity === "" ? (
-            <span className="muted">No identity reported</span>
+            <span className="muted">未报告身份信息</span>
           ) : (
             <span className="who">{connection.identity}</span>
           )}
@@ -164,7 +157,7 @@ function AccountRow(props: {
       </td>
       <td className="tlast">
         {connection.lastSuccessAt === null ? (
-          "Not yet"
+          "尚无"
         ) : (
           <When at={connection.lastSuccessAt} kind="ago" />
         )}
@@ -200,7 +193,7 @@ function ProviderGroup(props: {
           {props.providerHandle}
           <BrandMark provider={props.provider} />
           {providerName(props.provider)}
-          {count > 1 ? <span className="muted">{count} accounts</span> : null}
+          {count > 1 ? <span className="muted">{count} 个账户</span> : null}
         </th>
       </tr>
       {props.connections.map((connection) => (
@@ -220,8 +213,8 @@ function ProviderGroup(props: {
 
 const revocationNotice = {
   revoked: null,
-  local_only: "Removed from Headroom. The provider cannot cancel its sign-in.",
-  failed: "Removed from Headroom. The provider could not cancel its sign-in.",
+  local_only: "已从 Headroom 中移除。服务商无法取消它的登录。",
+  failed: "已从 Headroom 中移除。服务商未能取消它的登录。",
 } as const;
 
 /** The Connected Accounts table with its row actions. `reload` loads the overview again. */
@@ -307,7 +300,9 @@ export function AccountsTable(props: {
       reload();
       return true;
     } catch (cause) {
-      setError(isConnectionBusy(cause) ? connectionBusyMessage : messageOf(cause));
+      setError(
+        isConnectionBusy(cause) ? zhMessage(connectionBusyMessage) : zhMessage(messageOf(cause)),
+      );
       // The table note shows the refusal, so the confirm does not sit open over it.
       if (isDemoRefusal(cause)) setConfirming(null);
       return false;
@@ -340,12 +335,12 @@ export function AccountsTable(props: {
   }
 
   const removing = confirming?.state === "reconnect_required";
-  const confirmName = confirming === null ? "" : accountName(confirming);
+  const confirmName = confirming === null ? "" : zhAccountName(confirming);
   const groups = groupByProvider(shown, shownProviders);
   return (
     <section className="panel tablecard" aria-labelledby="connected-title">
       <div className="thead-row">
-        <h2 id="connected-title">Connected Accounts</h2>
+        <h2 id="connected-title">已连接的账户</h2>
         {status !== "ready" || connections.length === 0 ? null : (
           <Tally connections={connections} />
         )}
@@ -360,7 +355,7 @@ export function AccountsTable(props: {
             busy={saving > 0}
             onRetry={() => void saveOrder(orderFailure.next, orderFailure.previous)}
           >
-            Could not save the new order.
+            无法保存新的顺序。
           </ErrorNotice>
         </div>
       )}
@@ -368,13 +363,13 @@ export function AccountsTable(props: {
       {status === "failed" ? (
         <div className="table-state">
           <ErrorNotice inline busy={props.retrying} onRetry={reload}>
-            Headroom could not load your accounts. Check that it is running and try again.
+            Headroom 无法加载你的账户。请确认 Headroom 服务正在运行，然后重试。
           </ErrorNotice>
         </div>
       ) : null}
       {status === "ready" && groups.length === 0 ? (
-        <EmptyState compact icon={<UserIcon />} title="No Accounts Yet">
-          Accounts you connect appear here, with their limits and status.
+        <EmptyState compact icon={<UserIcon />} title="还没有账户">
+          你连接的账户会连同它们的额度和状态显示在这里。
         </EmptyState>
       ) : null}
       {status === "ready" && groups.length > 0 ? (
@@ -383,12 +378,12 @@ export function AccountsTable(props: {
           <table className="accounts" ref={tableRef}>
             <thead>
               <tr>
-                <th scope="col">Account</th>
-                <th scope="col">Limits</th>
-                <th scope="col">Status</th>
-                <th scope="col">Last Refreshed</th>
+                <th scope="col">账户</th>
+                <th scope="col">额度</th>
+                <th scope="col">状态</th>
+                <th scope="col">上次刷新</th>
                 <th scope="col">
-                  <span className="sr">Actions</span>
+                  <span className="sr">操作</span>
                 </th>
               </tr>
             </thead>
@@ -416,7 +411,7 @@ export function AccountsTable(props: {
                     kind: "account",
                     provider: group.provider,
                     id: connection.id,
-                    label: accountName(connection),
+                    label: zhAccountName(connection),
                   })
                 }
               />
@@ -427,25 +422,25 @@ export function AccountsTable(props: {
       <Dialog
         open={confirming !== null}
         onClose={() => setConfirming(null)}
-        title={removing ? `Remove ${confirmName}?` : `Disconnect ${confirmName}?`}
+        title={removing ? `移除 ${confirmName}？` : `断开 ${confirmName}？`}
       >
         <section className="dsec">
           <p className="secondary" style={{ margin: 0 }}>
             {removing
-              ? "Headroom forgets this account and its saved data."
-              : "Its saved sign-in is deleted and tracking stops."}
+              ? "Headroom 会忘记此账户及其保存的数据。"
+              : "它保存的登录信息会被删除，并停止跟踪。"}
           </p>
           <div className="row">
             <Button variant="quiet" onClick={() => setConfirming(null)}>
-              Cancel
+              取消
             </Button>
             <Button
               variant="danger"
               busy={confirming !== null && busyId === confirming.id}
-              busyLabel={removing ? "Removing" : "Disconnecting"}
+              busyLabel={removing ? "正在移除" : "正在断开"}
               onClick={() => void confirmRemove()}
             >
-              {removing ? "Remove" : "Disconnect"}
+              {removing ? "移除" : "断开连接"}
             </Button>
           </div>
         </section>

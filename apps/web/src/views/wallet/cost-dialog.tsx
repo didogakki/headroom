@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from "react";
 
 import type { Provider } from "@headroom/core/contracts";
-import { accountName, planLabel, providerName } from "@headroom/view-model/labels";
-import { monthLabel, type Cycle } from "@headroom/view-model/wallet-dates";
+import { planLabel, providerName } from "@headroom/view-model/labels";
+import type { Cycle } from "@headroom/view-model/wallet-dates";
 import { currencies, formatMoney, type Currency } from "@headroom/view-model/wallet-money";
 import { suggestPrices, type Cost, type WalletAccount } from "@headroom/view-model/wallet";
 
+import { zhAccountName, zhMonthLabel } from "../../lib/zh.ts";
 import { TextField } from "../../shell/delivery/form-parts.tsx";
 import { Button } from "../../ui/button.tsx";
 import { DatePicker } from "../../ui/date-picker.tsx";
@@ -17,14 +18,14 @@ import { Segmented } from "../../ui/segmented.tsx";
 type Kind = Cost["kind"];
 
 const kinds: readonly RadioCard<Kind>[] = [
-  { value: "paid", label: "Paid", description: "You pay for this plan." },
-  { value: "free", label: "Free", description: "Counts as nothing in your totals." },
-  { value: "included", label: "Included", description: "Comes with another subscription." },
+  { value: "paid", label: "付费", description: "你为这个套餐付费。" },
+  { value: "free", label: "免费", description: "在合计中按零计算。" },
+  { value: "included", label: "已包含", description: "包含在另一项订阅中。" },
 ];
 
 const cycles: readonly { readonly value: Cycle; readonly label: string }[] = [
-  { value: "monthly", label: "Monthly" },
-  { value: "annual", label: "Annual" },
+  { value: "monthly", label: "按月" },
+  { value: "annual", label: "按年" },
 ];
 
 /** Quick answers for "Included With": what each provider's accounts usually come with. */
@@ -34,7 +35,7 @@ const includedWith: Partial<Record<Provider, readonly string[]>> = {
   antigravity: ["Google AI Pro"],
 };
 
-const cycleUnit: Record<Cycle, string> = { monthly: "mo", annual: "yr" };
+const cycleUnit: Record<Cycle, string> = { monthly: "月", annual: "年" };
 
 function CostForm(props: {
   readonly account: WalletAccount;
@@ -81,10 +82,10 @@ function CostForm(props: {
       save({ kind: "free" });
     } else if (kind === "included") {
       const words = included.trim();
-      if (words === "") setError("Say what this account comes with.");
+      if (words === "") setError("请说明此账户包含在什么订阅中。");
       else save({ kind: "included", includedWith: words });
     } else {
-      if (price.minor === null || price.minor <= 0) setError("Enter an amount above zero.");
+      if (price.minor === null || price.minor <= 0) setError("请输入大于零的金额。");
       else {
         save({
           kind: "paid",
@@ -96,7 +97,7 @@ function CostForm(props: {
     }
   };
 
-  const description = [providerName(provider), accountName(account.connection), planLabel(plan)]
+  const description = [providerName(provider), zhAccountName(account.connection), planLabel(plan)]
     .filter((part) => part !== null)
     .join(" · ");
 
@@ -105,7 +106,7 @@ function CostForm(props: {
       <div className="dsec">
         <p className="w-desc">{description}</p>
         <RadioCards
-          label="Kind of cost"
+          label="费用类型"
           hideLabel
           value={kind}
           options={kinds}
@@ -119,9 +120,7 @@ function CostForm(props: {
         <div className="dsec">
           {suggestions.length === 0 ? null : (
             <div className="w-suggest">
-              <p className="w-desc">
-                List prices, checked {monthLabel(suggestions[0]?.asOf ?? "")}
-              </p>
+              <p className="w-desc">标价，核对于 {zhMonthLabel(suggestions[0]?.asOf ?? "")}</p>
               <div className="w-chips">
                 {suggestions.map((suggestion) => {
                   const chosen =
@@ -152,7 +151,7 @@ function CostForm(props: {
             </div>
           )}
           <MoneyInput
-            label="Price"
+            label="价格"
             minor={price.minor}
             currency={price.currency}
             currencies={currencies}
@@ -163,18 +162,18 @@ function CostForm(props: {
             }}
           />
           <div className="field">
-            <span className="w-label">Billing</span>
-            <Segmented full label="Billing" value={cycle} options={cycles} onChange={setCycle} />
+            <span className="w-label">计费周期</span>
+            <Segmented full label="计费周期" value={cycle} options={cycles} onChange={setCycle} />
           </div>
-          <DatePicker label="Renews On" optional value={renewsOn} onChange={setRenewsOn} />
+          <DatePicker label="续订日期" optional value={renewsOn} onChange={setRenewsOn} />
         </div>
       ) : null}
       {kind === "included" ? (
         <div className="dsec">
           <TextField
-            label="Included With"
+            label="包含在"
             value={included}
-            placeholder={quick[0] ?? "Another subscription"}
+            placeholder={quick[0] ?? "另一项订阅"}
             error={error}
             onChange={(value) => {
               setIncluded(value);
@@ -203,7 +202,7 @@ function CostForm(props: {
       ) : null}
       {failed ? (
         <p className="w-save-error" role="alert">
-          Could not save. Nothing was changed.
+          无法保存，未做任何更改。
         </p>
       ) : null}
       <div className="w-foot">
@@ -215,14 +214,14 @@ function CostForm(props: {
             disabled={pending === "save"}
             onClick={() => save(null)}
           >
-            Clear Cost
+            清除费用
           </Button>
         )}
         <Button disabled={pending !== null} onClick={props.onCancel}>
-          Cancel
+          取消
         </Button>
-        <Button variant="primary" type="submit" busy={pending === "save"} busyLabel="Saving">
-          Save Cost
+        <Button variant="primary" type="submit" busy={pending === "save"} busyLabel="正在保存">
+          保存费用
         </Button>
       </div>
     </form>
@@ -246,7 +245,7 @@ export function CostDialog(props: {
     <Dialog
       open={account !== null}
       onClose={onClose}
-      title={account?.cost === null || account === null ? "Set Cost" : "Edit Cost"}
+      title={account?.cost === null || account === null ? "设置费用" : "编辑费用"}
     >
       {account === null ? null : (
         <CostForm

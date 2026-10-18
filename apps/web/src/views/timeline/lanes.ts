@@ -21,9 +21,9 @@ import { captionOf, toneOf, type Caption, type Tone } from "@headroom/view-model
 export type TimelineKind = Exclude<WindowKind, "other">;
 
 export const timelineKinds: readonly { readonly value: TimelineKind; readonly label: string }[] = [
-  { value: "weekly", label: "Weekly" },
-  { value: "session", label: "5-Hour" },
-  { value: "cycle", label: "Cycle" },
+  { value: "weekly", label: "每周" },
+  { value: "session", label: "5 小时" },
+  { value: "cycle", label: "周期" },
 ];
 
 const day = 86_400_000;

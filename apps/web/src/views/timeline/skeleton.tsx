@@ -169,11 +169,11 @@ function ResetsGhost(props: { readonly count: number }) {
     <table className="tl-resets">
       <thead>
         <tr>
-          <th scope="col">When</th>
-          <th scope="col">Account</th>
-          <th scope="col">Limit</th>
-          <th scope="col">What Happened</th>
-          <th scope="col">Change</th>
+          <th scope="col">时间</th>
+          <th scope="col">账户</th>
+          <th scope="col">额度</th>
+          <th scope="col">发生了什么</th>
+          <th scope="col">变化</th>
         </tr>
       </thead>
       <tbody>
@@ -241,7 +241,7 @@ export function TimelineSkeleton() {
   };
   return (
     <div className="tl-view tl-sk" aria-busy="true">
-      <LoadingNote>Loading timeline</LoadingNote>
+      <LoadingNote>正在加载时间线</LoadingNote>
       <div className="tl-tools" aria-hidden="true">
         <h2 className="tl-range">{rangeLabel(axis)}</h2>
         <div className="tl-ctl">
@@ -250,7 +250,7 @@ export function TimelineSkeleton() {
               <Chevron direction="left" />
             </button>
             <button type="button" tabIndex={-1} className="tl-today-button" aria-disabled="true">
-              Today
+              今天
             </button>
             <button type="button" tabIndex={-1}>
               <Chevron direction="right" />
@@ -258,21 +258,21 @@ export function TimelineSkeleton() {
           </fieldset>
           <fieldset className="seg" inert>
             <button type="button" tabIndex={-1} aria-pressed="true">
-              Weekly
+              每周
             </button>
             <button type="button" tabIndex={-1}>
-              5-Hour
+              5 小时
             </button>
             <button type="button" tabIndex={-1}>
-              Cycle
+              周期
             </button>
           </fieldset>
           <fieldset className="seg" inert>
             <button type="button" tabIndex={-1}>
-              Used
+              已用
             </button>
             <button type="button" tabIndex={-1}>
-              Left
+              剩余
             </button>
           </fieldset>
         </div>
@@ -282,9 +282,9 @@ export function TimelineSkeleton() {
         <div className="tl-grid" style={gridStyle}>
           <div className="tl-hrow">
             <div className="tl-corner">
-              Account
+              账户
               <span>
-                Limits · <Sk kind="text" width={32} />
+                额度 · <Sk kind="text" width={32} />
               </span>
             </div>
             <div className="tl-cols">
@@ -327,7 +327,7 @@ export function TimelineSkeleton() {
             )}
             {nowX === null ? null : (
               <span className="tl-nowline" style={{ left: `${nowX}%` }}>
-                <b>Now</b>
+                <b>现在</b>
               </span>
             )}
           </div>
@@ -361,41 +361,41 @@ export function TimelineSkeleton() {
       <section className="tl-legend" aria-hidden="true">
         <span>
           <i className="tl-lg tl-lg-cur" />
-          Current Window
+          当前窗口
         </span>
         <span>
           <i className="tl-lg tl-lg-passed" />
-          Time Passed
+          已过时间
         </span>
         <span>
           <i className="tl-lg tl-lg-next" />
-          Next Window
+          下一个窗口
         </span>
         <span>
           <i className="tl-lg tl-lg-prev" />
-          Earlier
+          较早
         </span>
         <span>
           <i className="tl-lg tl-lg-bank" />
-          Banked Reset Expires
+          已存重置到期
         </span>
         <span>
           <i className="tl-lg tl-lg-early" />
-          Reset Early
+          提前重置
         </span>
         <span className="tl-tones">
           <i className="tl-dot" data-tone="good" />
-          Plenty Left
+          余量充足
           <i className="tl-dot" data-tone="warn" />
-          Running Low
+          余量偏低
           <i className="tl-dot" data-tone="bad" />
-          Almost Out
+          即将耗尽
         </span>
       </section>
 
       <div className="tl-pair" aria-hidden="true">
         <section className="tl-card">
-          <h2>Up Next</h2>
+          <h2>即将发生</h2>
           <div className="tl-card-body">
             <h3 className="tl-sub">
               <Sk kind="text" width={96} />
@@ -404,17 +404,17 @@ export function TimelineSkeleton() {
           </div>
         </section>
         <section className="tl-card">
-          <h2>Watch List</h2>
+          <h2>观察列表</h2>
           <div className="tl-card-body">
-            <h3 className="tl-sub">Running Low Until</h3>
+            <h3 className="tl-sub">余量偏低，直到</h3>
             <ItemsGhost count={2} />
           </div>
         </section>
       </div>
       <section className="tl-card tl-resets-card" aria-hidden="true">
         <div className="tl-card-head">
-          <h2>Recent Resets</h2>
-          <span>Last 7 days</span>
+          <h2>最近的重置</h2>
+          <span>最近 7 天</span>
         </div>
         <ResetsGhost count={2} />
         <ResetsListGhost count={2} />

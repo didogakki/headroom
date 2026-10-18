@@ -29,7 +29,7 @@ function Filter() {
       <div className="field fld" data-size="sm" inert>
         <button type="button" className="fld-trigger" data-size="sm" tabIndex={-1}>
           <span className="fld-value">
-            <span className="fld-main">All Accounts</span>
+            <span className="fld-main">全部账户</span>
           </span>
           <span className="fld-chevron" aria-hidden="true">
             <ChevronDownIcon />
@@ -108,7 +108,7 @@ const hourLabels = [0, 6, 12, 18] as const;
 function RhythmBody() {
   return (
     <div className="rh-view ans-view">
-      <Top big={300} cap={360} labels={["Matrix", "Weeks", "Range", "By Account"]} filter />
+      <Top big={300} cap={360} labels={["矩阵", "按周", "范围", "按账户"]} filter />
       <div className="ans-mx">
         <div className="ans-mx-body">
           <div className="ans-mx-dates">
@@ -133,15 +133,15 @@ function RhythmBody() {
               weekRows.map((hour) => <i key={`${day}.${hour}`} className="ans-cell" />),
             )}
           </div>
-          <span className="ans-mx-locked">Locked</span>
+          <span className="ans-mx-locked">锁定</span>
           <div className="ans-mx-strip">
             {dayColumns.map((day) => (
               <i key={day} className="ans-cell ans-cell-strip" />
             ))}
           </div>
           <div className="ans-mx-profile">
-            <span className="ans-t2">Day profile</span>
-            <span className="ans-t">avg accounts active</span>
+            <span className="ans-t2">日内曲线</span>
+            <span className="ans-t">平均活跃账户数</span>
             <div className="ans-mx-line">
               <Sk kind="block" />
             </div>
@@ -149,35 +149,35 @@ function RhythmBody() {
         </div>
       </div>
       <div className="an2-legend">
-        <span>Accounts active</span>
+        <span>活跃账户数</span>
         {[0, 1, 2, 3, 4].map((level) => (
           <LegendSk key={level} kind="ramp" level={level} width={24} />
         ))}
         <span>
           <Swatch kind="band" />
-          Locked
+          锁定
         </span>
         <span>
           <Swatch kind="dot" />
-          Ran out
+          已用尽
         </span>
         <span>
           <Swatch kind="line" />
-          Weekday
+          工作日
         </span>
         <span>
           <Swatch kind="dash" />
-          Weekend
+          周末
         </span>
-        <span>Dotted: no reading.</span>
+        <span>点状：无读数。</span>
       </div>
       <section className="ans-windows">
         <div className="ans-disclose">
           <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             <path d="M4 2.5 7.5 6 4 9.5" />
           </svg>
-          <span className="ans-disclose-title">Usage per window</span>
-          <span className="ans-disclose-hint">How full each limit window got</span>
+          <span className="ans-disclose-title">每个窗口的用量</span>
+          <span className="ans-disclose-hint">每个额度窗口用到了多满</span>
         </div>
       </section>
     </div>
@@ -199,7 +199,7 @@ function ForecastBody() {
             <span />
             <span className="ans-axis-days">
               <span className="ans-now-label" style={{ left: "2%" }}>
-                Now
+                现在
               </span>
               {dayMarks.map((mark) => (
                 <span key={mark} className="ans-axis-day" style={{ left: `${(mark / 28) * 100}%` }}>
@@ -235,18 +235,18 @@ function ForecastBody() {
         </div>
         <div className="an2-legend">
           <span>
-            Projected use
+            预计用量
             <i className="ans-sw-cell" data-level="0" />
             <i className="ans-sw-cell" data-level="1" />
             <i className="ans-sw-cell" data-level="2" />
             <i className="ans-sw-cell" data-level="3" />
-            under 25, 50, 75, 100%
+            分别低于25%、50%、75%、100%
           </span>
-          <Item kind="band">Runs out</Item>
-          <Item kind="band">Locked until reset</Item>
-          <Item kind="line">Reset</Item>
-          <Item kind="dash">New window, no forecast</Item>
-          <span>Assumes the pace holds. Select a row for detail.</span>
+          <Item kind="band">将用尽</Item>
+          <Item kind="band">锁定至重置</Item>
+          <Item kind="line">重置</Item>
+          <Item kind="dash">新窗口，无预测</Item>
+          <span>假设当前速度保持不变。选择一行查看详情。</span>
         </div>
       </div>
       <aside className="an2-panel">
@@ -276,10 +276,10 @@ function ForecastBody() {
           </div>
         </div>
         <dl className="ans-facts">
-          {["Pace", "Runs out", "Locked before reset"].map((name) => (
+          {["速度", "用尽时间", "重置前锁定"].map((name) => (
             <div key={name}>
               <dt>
-                <Sk kind="text" width={name.length > 10 ? 80 : 44} />
+                <Sk kind="text" width={name.length > 4 ? 80 : 44} />
               </dt>
               <dd>
                 <Sk kind="text" width={72} />
@@ -289,16 +289,16 @@ function ForecastBody() {
         </dl>
         <div className="ans-recent">
           <p className="ans-sec">
-            <b>Recent pace</b> · pp used per day
+            <b>近期速度</b> · 每天已用百分点
           </p>
           <p className="ans-sub">
             <Sk kind="text" width={120} />
           </p>
           <Sk kind="block" height={104} />
           <div className="an2-legend">
-            <Item kind="ramp">Within allowance</Item>
-            <Item kind="dot">Over</Item>
-            <Item kind="dash">Allowed per day</Item>
+            <Item kind="ramp">未超出额度</Item>
+            <Item kind="dot">超出</Item>
+            <Item kind="dash">每天允许量</Item>
           </div>
         </div>
       </aside>
@@ -346,7 +346,7 @@ function Tile(props: { readonly label: string; readonly small: number }) {
 function FitBody() {
   return (
     <div className="ans-fit ans-view">
-      <Top big={300} cap={360} labels={["History", "Actions"]} />
+      <Top big={300} cap={360} labels={["历史", "建议"]} />
       <div className="an2-split ans-split ans-fitsplit">
         <div className="ans-main">
           <div className="ans-fitgrid">
@@ -385,11 +385,11 @@ function FitBody() {
               {[0, 1, 2, 3].map((level) => (
                 <Swatch key={level} kind="ramp" level={level} />
               ))}
-              Peak: under 40, 40-60, 60-80, 80-99%
+              峰值：低于40、40-60、60-80、80-99%
             </span>
-            <Item kind="band">Hit the limit</Item>
-            <Item kind="dash">Current window</Item>
-            <span>One cell per window. Width is its length.</span>
+            <Item kind="band">触达上限</Item>
+            <Item kind="dash">当前窗口</Item>
+            <span>每个窗口一格，宽度即窗口长度。</span>
           </div>
         </div>
         <aside className="an2-panel ans-fitpanel">
@@ -408,13 +408,13 @@ function FitBody() {
             </span>
           </div>
           <div className="ans-tiles">
-            <Tile label="Average peak" small={0} />
-            <Tile label="At the limit" small={60} />
-            <Tile label="Locked" small={64} />
-            <Tile label="Unused" small={90} />
+            <Tile label="平均峰值" small={0} />
+            <Tile label="触达上限" small={60} />
+            <Tile label="锁定" small={64} />
+            <Tile label="未用" small={90} />
           </div>
           <p className="ans-fsec">
-            <b>Peak per week</b> · last 90 days
+            <b>每周的峰值</b> · 最近90天
           </p>
           <div className="ans-cols">
             <div className="ans-cols-plot">
@@ -434,10 +434,10 @@ function FitBody() {
             </span>
           </div>
           <div className="an2-legend">
-            <Item kind="ramp">Peak</Item>
-            <Item kind="band">Hit the limit</Item>
-            <Item kind="fill">Now</Item>
-            <Item kind="dash">Average</Item>
+            <Item kind="ramp">峰值</Item>
+            <Item kind="band">触达上限</Item>
+            <Item kind="fill">现在</Item>
+            <Item kind="dash">平均</Item>
           </div>
           <p className="ans-obs">
             <Sk kind="text" width="100%" />
@@ -461,12 +461,12 @@ function Card(props: { readonly children: ReactNode }) {
 export function AnalyticsSkeleton() {
   return (
     <div className="an-page ans" aria-busy="true">
-      <LoadingNote>Loading analytics</LoadingNote>
+      <LoadingNote>正在加载分析</LoadingNote>
       <Card>
         <RhythmBody />
       </Card>
       <Card>
-        <Top big={300} cap={360} labels={["Forecast", "Table"]} />
+        <Top big={300} cap={360} labels={["预测", "表格"]} />
         <ForecastBody />
       </Card>
       <Card>

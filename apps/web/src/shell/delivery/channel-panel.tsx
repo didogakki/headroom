@@ -84,7 +84,7 @@ export function ChannelPanel(props: {
   };
 
   return (
-    <section className="dl-panel dl-manage" aria-label={`${title} Settings`}>
+    <section className="dl-panel dl-manage" aria-label={`${title}设置`}>
       <div className="srow">
         <span className="sbody">
           <b className="dl-title">
@@ -96,13 +96,13 @@ export function ChannelPanel(props: {
         </span>
         <Switch
           checked={enabled}
-          label={`${title} On`}
+          label={`${title}已开启`}
           onChange={(next) => patch({ enabled: next })}
         />
       </div>
       <SwitchRow
-        title="Include Account Email"
-        note="Adds the email or login of each account."
+        title="包含账户邮箱"
+        note="附上每个账户的邮箱或登录名。"
         checked={includeIdentity}
         onChange={(next) => patch({ includeIdentity: next })}
       />
@@ -111,18 +111,18 @@ export function ChannelPanel(props: {
           size="sm"
           variant="quiet"
           icon={<BellIcon />}
-          label="Send Test"
-          pendingLabel="Sending"
-          successLabel="Sent"
-          failedLabel="Not Sent"
+          label="发送测试"
+          pendingLabel="正在发送"
+          successLabel="已发送"
+          failedLabel="未发送"
           onAction={test}
         />
         <Button size="sm" variant="quiet" onClick={props.onChange}>
-          {webhook ? "Change URL" : "Set Up Again"}
+          {webhook ? "更改 URL" : "重新设置"}
         </Button>
         {webhook && !rotating ? (
           <Button size="sm" variant="quiet" onClick={() => setRotating(true)}>
-            New Secret
+            新密钥
           </Button>
         ) : null}
         <RemoveButton onRemove={remove} />

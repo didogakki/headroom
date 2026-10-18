@@ -70,7 +70,7 @@ export function Select<T extends string>(props: {
       >
         <span id={`${id}-value`} className="fld-value">
           {chosen === undefined ? (
-            <span className="fld-ph">{props.placeholder ?? "Select an option"}</span>
+            <span className="fld-ph">{props.placeholder ?? "请选择"}</span>
           ) : (
             <>
               {chosen.icon === undefined ? null : <span className="fld-icon">{chosen.icon}</span>}

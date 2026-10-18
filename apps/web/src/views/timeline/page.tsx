@@ -168,8 +168,8 @@ function TimelineBoard(props: {
           {rangeLabel(axis)}
         </h2>
         <div className="tl-ctl">
-          <fieldset className="tl-step" aria-label="Range">
-            <button type="button" aria-label={`Earlier, ${axis.stepWord}`} onClick={() => move(-1)}>
+          <fieldset className="tl-step" aria-label="时间范围">
+            <button type="button" aria-label={`前移${axis.stepWord}`} onClick={() => move(-1)}>
               <Chevron direction="left" />
             </button>
             <button
@@ -182,24 +182,24 @@ function TimelineBoard(props: {
                 }
               }}
             >
-              Today
+              今天
             </button>
-            <button type="button" aria-label={`Later, ${axis.stepWord}`} onClick={() => move(1)}>
+            <button type="button" aria-label={`后移${axis.stepWord}`} onClick={() => move(1)}>
               <Chevron direction="right" />
             </button>
           </fieldset>
           <Segmented
-            label="Window Type"
+            label="窗口类型"
             value={kind}
             options={timelineKinds}
             onChange={(next) => setPosition({ kind: next, step: 0, direction: "swap" })}
           />
           <Segmented
-            label="Show Limits As"
+            label="额度显示方式"
             value={settings.limitsView}
             options={[
-              { value: "used", label: "Used" },
-              { value: "left", label: "Left" },
+              { value: "used", label: "已用" },
+              { value: "left", label: "剩余" },
             ]}
             onChange={(limitsView) => void settingsState.update({ limitsView })}
           />
@@ -207,7 +207,7 @@ function TimelineBoard(props: {
       </div>
 
       <div className={intro ? "tl-intro" : undefined}>
-        <section className="tl-chart" aria-label="Quota window timeline">
+        <section className="tl-chart" aria-label="额度窗口时间线">
           <SlideSwap swapKey={`${kind}:${step}`} direction={position.direction}>
             {groups.length === 0 ? (
               <TimelineEmpty label={kindLabel} />
@@ -216,7 +216,7 @@ function TimelineBoard(props: {
             )}
           </SlideSwap>
         </section>
-        <section className="tl-list" aria-label="Quota windows by account">
+        <section className="tl-list" aria-label="按账户列出的额度窗口">
           <SlideSwap swapKey={kind} direction="swap">
             {groups.length === 0 ? (
               <TimelineEmpty label={kindLabel} />
@@ -240,43 +240,43 @@ function TimelineBoard(props: {
 }
 
 function TimelineEmpty(props: { readonly label: string }) {
-  return <p className="tl-none">{`No ${props.label} Windows to Show.`}</p>;
+  return <p className="tl-none">{`没有可显示的${props.label}窗口。`}</p>;
 }
 
 function Legend() {
   return (
-    <section className="tl-legend" aria-label="Legend">
+    <section className="tl-legend" aria-label="图例">
       <span>
         <i className="tl-lg tl-lg-cur" />
-        Current Window
+        当前窗口
       </span>
       <span>
         <i className="tl-lg tl-lg-passed" />
-        Time Passed
+        已过时间
       </span>
       <span>
         <i className="tl-lg tl-lg-next" />
-        Next Window
+        下一个窗口
       </span>
       <span>
         <i className="tl-lg tl-lg-prev" />
-        Earlier
+        较早
       </span>
       <span>
         <i className="tl-lg tl-lg-bank" />
-        Banked Reset Expires
+        已存重置到期
       </span>
       <span>
         <i className="tl-lg tl-lg-early" />
-        Reset Early
+        提前重置
       </span>
       <span className="tl-tones">
         <i className="tl-dot" data-tone="good" />
-        Plenty Left
+        余量充足
         <i className="tl-dot" data-tone="warn" />
-        Running Low
+        余量偏低
         <i className="tl-dot" data-tone="bad" />
-        Almost Out
+        即将耗尽
       </span>
     </section>
   );

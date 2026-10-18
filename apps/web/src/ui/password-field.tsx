@@ -94,6 +94,8 @@ export interface PasswordFieldProps extends Omit<InputHTMLAttributes<HTMLInputEl
   readonly error?: string | undefined;
   /** Content under the messages, for example the strength meter. */
   readonly children?: ReactNode;
+  /** Accessible name of the show and hide button; English unless the caller words it. */
+  readonly showLabel?: string | undefined;
 }
 
 /**
@@ -105,6 +107,7 @@ export function PasswordField({
   description,
   error,
   children,
+  showLabel,
   id,
   className,
   ...input
@@ -142,7 +145,7 @@ export function PasswordField({
         <button
           type="button"
           className="pw-toggle"
-          aria-label="Show password"
+          aria-label={showLabel ?? "Show password"}
           aria-pressed={shown}
           aria-controls={controlId}
           onClick={() => {

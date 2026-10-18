@@ -27,7 +27,7 @@ function SettingsFailed() {
         void settings.reload().finally(() => setBusy(false));
       }}
     >
-      Headroom could not load your settings, so the defaults are showing.
+      Headroom 无法加载你的设置，因此正在显示默认值。
     </ErrorNotice>
   );
 }

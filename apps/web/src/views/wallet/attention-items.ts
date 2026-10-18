@@ -1,6 +1,7 @@
-import { dayLabel } from "@headroom/view-model/wallet-dates";
 import type { OverviewConnection } from "@headroom/view-model/overview";
 import type { Amount, WalletSummary, WalletTopUp } from "@headroom/view-model/wallet";
+
+import { zhDay, zhLabel } from "../../lib/zh.ts";
 
 /** One thing a total leaves out, named exactly, with the fix when there is one. */
 export interface AttentionItem {
@@ -21,13 +22,12 @@ function noRate(amount: Amount | null): boolean {
 }
 
 function rateIssue(amount: Amount, what: string): string {
-  return `${what} is in ${amount.noRate ?? "a currency"}, which has no exchange rate today, so it is left out.`;
+  return `${what}以 ${amount.noRate ?? "某种货币"} 计价，今天没有该货币的汇率，因此未计入。`;
 }
 
 function topUpWhen(topUp: WalletTopUp): string {
-  const credits =
-    topUp.credits === null ? "" : ` of ${topUp.credits.toLocaleString("en-US")} credits`;
-  return `The top-up${credits} on ${dayLabel(topUp.date)}`;
+  const credits = topUp.credits === null ? "" : `（${topUp.credits.toLocaleString("en-US")} 积分）`;
+  return `${zhDay(topUp.date)}的充值${credits}`;
 }
 
 /** Accounts with no cost, and subscription costs with no exchange rate. */
@@ -41,8 +41,8 @@ export function subscriptionIssues(summary: WalletSummary, fixes: AttentionFixes
           {
             key: `cost:${connection.id}`,
             connection,
-            issue: "No cost set, so it is left out of every total.",
-            fix: { label: "Set Cost", run: () => fixes.onSetCost(connection.id) },
+            issue: "未设置费用，因此未计入任何合计。",
+            fix: { label: "设置费用", run: () => fixes.onSetCost(connection.id) },
           },
         ];
       }
@@ -51,7 +51,7 @@ export function subscriptionIssues(summary: WalletSummary, fixes: AttentionFixes
           {
             key: `cost-rate:${connection.id}`,
             connection,
-            issue: rateIssue(account.monthly, "The cost"),
+            issue: rateIssue(account.monthly, "费用"),
           },
         ];
       }
@@ -69,7 +69,7 @@ export function usageIssues(summary: WalletSummary): AttentionItem[] {
             {
               key: `usage-rate:${account.connection.id}`,
               connection: account.connection,
-              issue: rateIssue(account.usageSpend, account.usageSpend.label),
+              issue: rateIssue(account.usageSpend, zhLabel(account.usageSpend.label)),
             },
           ]
         : [],
@@ -86,13 +86,13 @@ export function topUpIssues(
     if (topUp.kind !== "paid") return [];
     const connection = connections.get(topUp.connectionId);
     if (topUp.price === null) {
-      const found = topUp.source === "detected" ? " Headroom detected it from a balance rise." : "";
+      const found = topUp.source === "detected" ? "Headroom 是从余额上升检测到它的。" : "";
       return [
         {
           key: `price:${topUp.id}`,
           connection,
-          issue: `${topUpWhen(topUp)} has no price, so it is left out.${found}`,
-          fix: { label: "Add Price", run: () => fixes.onEditTopUp(topUp) },
+          issue: `${topUpWhen(topUp)}没有价格，因此未计入。${found}`,
+          fix: { label: "添加价格", run: () => fixes.onEditTopUp(topUp) },
         },
       ];
     }

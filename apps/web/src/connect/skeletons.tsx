@@ -10,7 +10,7 @@ export function CardsSkeleton(props: { readonly announce?: boolean }) {
   const { announce = true } = props;
   return (
     <div className="cards" aria-busy={announce ? "true" : undefined}>
-      {announce ? <LoadingNote>Loading providers</LoadingNote> : null}
+      {announce ? <LoadingNote>正在加载服务商</LoadingNote> : null}
       {nameWidths.map((width) => (
         <div key={width} className="card sk-card" aria-hidden="true">
           <span className="head">
@@ -25,7 +25,7 @@ export function CardsSkeleton(props: { readonly announce?: boolean }) {
   );
 }
 
-const columnHeadings = ["Account", "Limits", "Status", "Last Refreshed"] as const;
+const columnHeadings = ["账户", "额度", "状态", "上次刷新"] as const;
 
 function SkeletonRow(props: { readonly wide: boolean }) {
   return (
@@ -76,7 +76,7 @@ export function TableSkeleton(props: { readonly announce?: boolean }) {
   const { announce = true } = props;
   return (
     <div className="tscroll" aria-busy={announce ? "true" : undefined}>
-      {announce ? <LoadingNote>Loading accounts</LoadingNote> : null}
+      {announce ? <LoadingNote>正在加载账户</LoadingNote> : null}
       <table className="accounts" aria-hidden="true">
         <thead>
           <tr>
@@ -86,7 +86,7 @@ export function TableSkeleton(props: { readonly announce?: boolean }) {
               </th>
             ))}
             <th scope="col">
-              <span className="sr">Actions</span>
+              <span className="sr">操作</span>
             </th>
           </tr>
         </thead>
@@ -111,15 +111,15 @@ export function TableSkeleton(props: { readonly announce?: boolean }) {
 export function ConnectSkeleton() {
   return (
     <div className="connect-page" aria-busy="true">
-      <LoadingNote>Loading</LoadingNote>
+      <LoadingNote>正在加载</LoadingNote>
       <div className="intro">
-        <h1>Connect an Account</h1>
-        <p>Choose a provider. You only sign in once.</p>
+        <h1>连接账户</h1>
+        <p>选择一个服务商。你只需登录一次。</p>
       </div>
       <CardsSkeleton announce={false} />
       <section className="panel tablecard">
         <div className="thead-row">
-          <h2>Connected Accounts</h2>
+          <h2>已连接的账户</h2>
         </div>
         <TableSkeleton announce={false} />
       </section>

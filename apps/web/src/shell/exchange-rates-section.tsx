@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 
-import { currencies, currencyName } from "@headroom/view-model/wallet-money";
+import { currencies } from "@headroom/view-model/wallet-money";
 import { formatNumber } from "@headroom/view-model/present";
 import { age } from "@headroom/view-model/time";
 import { dayLabel } from "@headroom/view-model/wallet-dates";
+import { zhAge, zhCurrencyName, zhDates, zhMessage } from "../lib/zh.ts";
 
 import { RetryIcon } from "../icons.tsx";
 import { refreshExchangeRates, useExchangeRates } from "../lib/exchange-rates.ts";
@@ -39,13 +40,13 @@ export function ExchangeRatesSection() {
     void refreshExchangeRates();
   };
   const status = [
-    rates.fetchedAt === null ? null : `Updated ${age(rates.fetchedAt, now).toLowerCase()}`,
-    rates.date === null ? null : `ECB ${dayLabel(rates.date)}`,
+    rates.fetchedAt === null ? null : `更新于${zhAge(age(rates.fetchedAt, now))}`,
+    rates.date === null ? null : `ECB ${zhDates(dayLabel(rates.date))}`,
   ].filter((part) => part !== null);
   return (
-    <Section title="Exchange Rates">
+    <Section title="汇率">
       <div className="srow">
-        <Body title="Rates" note="Daily ECB rates. Wallet totals are approximate." />
+        <Body title="汇率" note="每日 ECB 汇率。钱包中的合计金额为近似值。" />
         <span className="xr-status">
           {status.length === 0 ? null : (
             // Each part keeps its words together; a narrow screen moves a whole part to the next line.
@@ -61,10 +62,10 @@ export function ExchangeRatesSection() {
           <Button
             variant="quiet"
             size="sm"
-            aria-label="Refresh Rates"
-            title={resting ? "Refreshed. Try again in a minute." : "Refresh Rates"}
+            aria-label="刷新汇率"
+            title={resting ? "已刷新。请一分钟后再试。" : "刷新汇率"}
             busy={busy}
-            busyLabel="Refreshing"
+            busyLabel="正在刷新"
             disabled={resting}
             onClick={press}
           >
@@ -74,20 +75,20 @@ export function ExchangeRatesSection() {
       </div>
       {rates.error === null ? null : (
         <ErrorNotice inline>
-          {rates.error}
-          {rates.perUsd === null ? "" : " The rates below are the last good ones."}
+          {zhMessage(rates.error)}
+          {rates.perUsd === null ? "" : "下方显示的是上一次成功获取的汇率。"}
         </ErrorNotice>
       )}
       {rates.perUsd === null ? (
-        <p className="xr-empty muted">{busy ? "Loading rates." : "No rates yet."}</p>
+        <p className="xr-empty muted">{busy ? "正在加载汇率。" : "暂无汇率。"}</p>
       ) : (
         <div className="xr-card">
           <table className="xr-table">
             <thead>
               <tr>
-                <th scope="col">Currency</th>
-                <th scope="col">Per 1 USD</th>
-                <th scope="col">1 Unit in USD</th>
+                <th scope="col">币种</th>
+                <th scope="col">每 1 美元</th>
+                <th scope="col">1 单位折合美元</th>
               </tr>
             </thead>
             <tbody>
@@ -99,7 +100,7 @@ export function ExchangeRatesSection() {
                     <tr key={currency}>
                       <th scope="row">
                         <span className="xr-code">{currency}</span>
-                        <span className="muted">{currencyName(currency)}</span>
+                        <span className="muted">{zhCurrencyName(currency)}</span>
                       </th>
                       <td className="num">{rate === undefined ? "—" : rateText(rate)}</td>
                       <td className="num">{rate === undefined ? "—" : rateText(1 / rate)}</td>

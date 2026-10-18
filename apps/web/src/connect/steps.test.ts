@@ -58,9 +58,9 @@ describe("pasteInputKind", () => {
 
 describe("acceptsLabel", () => {
   test("names what to paste", () => {
-    expect(acceptsLabel("url")).toBe("Address You Landed On");
-    expect(acceptsLabel("code")).toBe("Code Shown");
-    expect(acceptsLabel("url_or_code")).toBe("Address or Code");
+    expect(acceptsLabel("url")).toBe("你到达的地址");
+    expect(acceptsLabel("code")).toBe("显示的代码");
+    expect(acceptsLabel("url_or_code")).toBe("地址或代码");
   });
 });
 
@@ -96,10 +96,10 @@ describe("method availability", () => {
 
   test("the note says what to install and what to use instead", () => {
     expect(unavailableNote("Codex", missing, ["import"])).toBe(
-      "Needs the Codex CLI on the server. Install it, or use Import.",
+      "服务器上需要安装 Codex CLI。请安装它，或使用“导入文件”。",
     );
     expect(unavailableNote("Codex", missing, [])).toBe(
-      "Needs the Codex CLI on the server. Install it, then try again.",
+      "服务器上需要安装 Codex CLI。请安装它，然后重试。",
     );
   });
 });
@@ -117,23 +117,17 @@ describe("clockLeft", () => {
 
 describe("stoppedReason", () => {
   test("expired and cancelled have their own words", () => {
-    expect(stoppedReason({ state: "expired", error: null })).toBe(
-      "The approval expired. Nothing was saved.",
-    );
-    expect(stoppedReason({ state: "cancelled", error: null })).toBe(
-      "The sign-in was cancelled. Nothing was saved.",
-    );
+    expect(stoppedReason({ state: "expired", error: null })).toBe("批准已过期。未保存任何内容。");
+    expect(stoppedReason({ state: "cancelled", error: null })).toBe("登录已取消。未保存任何内容。");
   });
   test("a failure maps its category to plain words", () => {
     expect(stoppedReason({ state: "failed", error: "rate_limited: HTTP 429 secret" })).toBe(
-      "The provider asked to slow down. Nothing was saved. Try again in a minute.",
+      "服务商要求放慢速度。未保存任何内容。请一分钟后重试。",
     );
   });
   test("an unknown category falls back and never leaks the raw text", () => {
     const text = stoppedReason({ state: "failed", error: "weird_thing: token abc" });
-    expect(text).toBe(
-      "The provider rejected the sign-in. Nothing was saved. Check the account and try again.",
-    );
+    expect(text).toBe("服务商拒绝了此次登录。未保存任何内容。请检查账户后重试。");
     expect(text).not.toContain("abc");
   });
 });

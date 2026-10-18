@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
 
 import { BrandMark } from "../../icons.tsx";
-import { age, exactFull, type TimeStyle } from "@headroom/view-model/time";
+import type { TimeStyle } from "@headroom/view-model/time";
+import { zhAgo, zhExactFull } from "../../lib/zh.ts";
 import { cx } from "../../ui/cx.ts";
 import type { ResetRow } from "./resets.ts";
 import { SharedIdentity } from "./cards.tsx";
@@ -18,8 +19,8 @@ interface Look extends TipContext {
 /** How long ago over the exact time, or the other way round under the Exact time style. */
 function Ago(props: { readonly at: number; readonly look: Look }) {
   const { at, look } = props;
-  const ago = age(at, look.now);
-  const exact = exactFull(at, look.now, look.clock);
+  const ago = zhAgo(at, look.now);
+  const exact = zhExactFull(at, look.now, look.clock);
   return (
     <span className="tl-when">
       <b>{look.timeStyle === "countdown" ? ago : exact}</b>
@@ -44,20 +45,20 @@ export function RecentResetsCard(props: {
   return (
     <section className="tl-card tl-resets-card" aria-labelledby={titleId}>
       <div className="tl-card-head">
-        <h2 id={titleId}>Recent Resets</h2>
-        <span>Last 7 days</span>
+        <h2 id={titleId}>最近的重置</h2>
+        <span>最近 7 天</span>
       </div>
       {rows.length === 0 ? (
-        <p className="tl-empty">No resets in the last 7 days.</p>
+        <p className="tl-empty">最近 7 天没有重置。</p>
       ) : (
         <table className="tl-resets">
           <thead>
             <tr>
-              <th scope="col">When</th>
-              <th scope="col">Account</th>
-              <th scope="col">Limit</th>
-              <th scope="col">What Happened</th>
-              <th scope="col">Change</th>
+              <th scope="col">时间</th>
+              <th scope="col">账户</th>
+              <th scope="col">额度</th>
+              <th scope="col">发生了什么</th>
+              <th scope="col">变化</th>
             </tr>
           </thead>
           <tbody>
@@ -97,8 +98,8 @@ export function RecentResetsCard(props: {
             <li key={row.id} className={cx(row.inactive && "tl-dim")}>
               <i className="tl-r-mark" data-mark={row.mark} aria-hidden="true" />
               <b className="tl-rl-what">{row.what}</b>
-              <span className="tl-rl-ago" title={exactFull(row.at, look.now, look.clock)}>
-                {age(row.at, look.now)}
+              <span className="tl-rl-ago" title={zhExactFull(row.at, look.now, look.clock)}>
+                {zhAgo(row.at, look.now)}
               </span>
               <BrandMark provider={row.connection.provider} />
               <span className="tl-rl-who">
@@ -121,7 +122,7 @@ export function RecentResetsCard(props: {
           aria-expanded={all}
           onClick={() => setAll((was) => !was)}
         >
-          {all ? "Show Fewer" : `Show All ${rows.length}`}
+          {all ? "收起" : `显示全部 ${rows.length} 项`}
         </button>
       ) : null}
     </section>

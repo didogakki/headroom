@@ -4,7 +4,6 @@ import { ApiError, api, type OverviewConnection } from "../api.ts";
 import { AlertIcon, ClockIcon, PauseIcon, PlayIcon, ResetIcon, RetryIcon } from "../icons.tsx";
 import {
   awaitingFirstRefresh,
-  accountName,
   planLabel,
   providerName,
   refreshFailed,
@@ -13,7 +12,7 @@ import {
 import { useDevicePrefs } from "../lib/device-prefs.ts";
 import { isDemoSite } from "../lib/site.ts";
 import { useNow } from "../lib/now.ts";
-import { autoResetSummary } from "@headroom/view-model/automation";
+import { zhAccountName, zhAutoResetSummary, zhFactValue, zhLabel } from "../lib/zh.ts";
 import { presentPanel } from "@headroom/view-model/present";
 import { usePanelDisplay, useSettings } from "../lib/settings.tsx";
 import { When } from "../lib/when.tsx";
@@ -33,11 +32,10 @@ import { SkeletonCells } from "./skeletons.tsx";
 const resetReloadMs = 2400;
 
 const reconnectWords: Record<NonNullable<OverviewConnection["reconnectReason"]>, string> = {
-  refresh_rejected: "The sign-in for this account has expired. Reconnect to keep tracking it.",
-  token_rejected: "The sign-in for this account has expired. Reconnect to keep tracking it.",
-  identity_changed:
-    "This sign-in now belongs to a different account. Reconnect to keep tracking it.",
-  revoked_by_owner: "Access to this account was revoked. Reconnect to keep tracking it.",
+  refresh_rejected: "此账户的登录已过期。请重新连接以继续跟踪。",
+  token_rejected: "此账户的登录已过期。请重新连接以继续跟踪。",
+  identity_changed: "这个登录现在属于另一个账户。请重新连接以继续跟踪。",
+  revoked_by_owner: "对此账户的访问已被撤销。请重新连接以继续跟踪。",
 };
 
 function Notice(props: {
@@ -98,7 +96,7 @@ export function AccountPanel(props: {
             size="sm"
             href={href({ page: "reconnect", id: connection.id })}
           >
-            Reconnect
+            重新连接
           </ButtonLink>
         }
       >
@@ -114,33 +112,33 @@ export function AccountPanel(props: {
           <ActionButton
             size="sm"
             icon={<PlayIcon />}
-            label="Resume"
-            pendingLabel="Resuming"
-            successLabel="Resumed"
-            failedLabel={demo ? "Demo Mode" : "Failed"}
+            label="恢复"
+            pendingLabel="正在恢复"
+            successLabel="已恢复"
+            failedLabel={demo ? "演示模式" : "失败"}
             onAction={resume}
           />
         }
       >
-        Paused. Headroom is not refreshing this account.
+        已暂停。Headroom 不会刷新此账户。
       </Notice>
     );
   } else if (waiting) {
     notice = (
       <Notice tone="neutral" icon={<ClockIcon />}>
-        Connected just now. The first refresh is running.
+        刚刚连接。首次刷新正在进行。
       </Notice>
     );
   } else if (refreshFailed(connection.latestRun)) {
     notice = (
       <Notice tone="neutral" icon={<RetryIcon />}>
-        Headroom could not refresh this account. It will try again in a few minutes.
+        Headroom 无法刷新此账户，几分钟后会再次尝试。
       </Notice>
     );
   } else if (connection.stale) {
     notice = (
       <Notice tone="warn" icon={<ClockIcon />}>
-        {`${providerName(connection.provider)} has not answered for a while. The numbers below are from the last good refresh.`}
+        {`${providerName(connection.provider)} 已有一段时间没有响应。下方数字来自上一次成功的刷新。`}
       </Notice>
     );
   }
@@ -170,7 +168,7 @@ export function AccountPanel(props: {
           <AccountTitle
             id={connection.id}
             headingId={headingId}
-            name={accountName(connection)}
+            name={zhAccountName(connection)}
             custom={connection.name?.trim() ? connection.name.trim() : null}
             plan={planLabel(connection.plan)}
             identity={connection.identity}
@@ -196,13 +194,13 @@ export function AccountPanel(props: {
                 {hold === null ? null : (
                   <HoldButton
                     size="sm"
-                    label="Hold to Reset Limits"
+                    label="长按重置额度"
                     // An unknown outcome re-arms only after a newer successful collection shows the real state.
                     settleKey={connection.lastSuccessAt}
                     // Follows the Settings switch directly; the server refuses the action whenever the saved setting is off.
                     off={!actionsEnabled}
                     {...(demo
-                      ? { failedLabel: isDemoSite ? "Demo Only" : "Turn Off Demo Mode to Reset" }
+                      ? { failedLabel: isDemoSite ? "仅限演示" : "请关闭演示模式后再重置" }
                       : {})}
                     onConfirm={async () => {
                       try {
@@ -217,18 +215,18 @@ export function AccountPanel(props: {
                 )}
                 {banked === null ? null : <BankedResets {...banked} />}
                 {autoRule === null || !autoRule.enabled ? null : (
-                  <span className="auto-chip" title={autoResetSummary(autoRule)}>
+                  <span className="auto-chip" title={zhAutoResetSummary(autoRule)}>
                     <Pill tone="quiet" icon={<ResetIcon />}>
-                      Auto-reset on
+                      自动重置已开启
                     </Pill>
-                    <span className="sr">{autoResetSummary(autoRule)}</span>
+                    <span className="sr">{zhAutoResetSummary(autoRule)}</span>
                   </span>
                 )}
               </span>
             )}
             {model.facts.map((fact) => (
               <span className="kv" key={fact.key}>
-                {fact.label} <b>{fact.value}</b>
+                {zhLabel(fact.label)} <b>{zhFactValue(fact.value)}</b>
               </span>
             ))}
             {waiting ? null : (

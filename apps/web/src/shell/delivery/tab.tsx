@@ -38,14 +38,14 @@ export function ChannelsTab() {
     return (
       <Section>
         <ErrorNotice inline busy={retrying} onRetry={retry}>
-          Headroom could not load your channels.
+          Headroom 无法加载你的渠道。
         </ErrorNotice>
       </Section>
     );
   }
   if (status === "loading") {
     return (
-      <div aria-busy="true" aria-label="Loading channels">
+      <div aria-busy="true" aria-label="正在加载渠道">
         <Waiting />
       </div>
     );

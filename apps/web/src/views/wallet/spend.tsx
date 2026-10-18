@@ -16,11 +16,11 @@ import { formatMoney, type Currency } from "@headroom/view-model/wallet-money";
 const shareFormat = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 function sourceName(source: SpendSource): string {
-  return source === removedAccounts ? "Removed Accounts" : providerName(source);
+  return source === removedAccounts ? "已删除的账户" : providerName(source);
 }
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}`;
 }
 
 /** A ring arc from angle `a0` to `a1` (radians, clockwise from the top), `w` thick, inside a circle of radius `r`. */
@@ -95,28 +95,26 @@ export function SpendByProvider(props: { readonly summary: WalletSummary }) {
   const focus = parts.find((part) => part.provider === active);
   const unpaid = summary.counts.free + summary.counts.included;
   const footer = [
-    all === 0 ? null : `Per year at this rate ${money(Math.round(all * 12))}`,
-    unpaid === 0
-      ? null
-      : `${plural(unpaid, "free or included account", "free or included accounts")} not shown`,
+    all === 0 ? null : `按此速度全年 ${money(Math.round(all * 12))}`,
+    unpaid === 0 ? null : `${plural(unpaid, "个免费或已包含的账户")}未显示`,
     summary.allIn.missing === 0
       ? null
-      : `${plural(summary.allIn.missing, "amount", "amounts")} without a rate left out`,
+      : `${plural(summary.allIn.missing, "笔金额")}因没有汇率而未计入`,
     summary.topUpsThisMonth.unpriced === 0
       ? null
-      : `${plural(summary.topUpsThisMonth.unpriced, "top-up", "top-ups")} with no price left out`,
+      : `${plural(summary.topUpsThisMonth.unpriced, "笔充值")}因没有价格而未计入`,
   ].filter((part) => part !== null);
 
   return (
     <section className="w-spend" aria-labelledby={headingId}>
       <div className="w-card">
         <header className="w-card-head">
-          <h2 id={headingId}>Spend by Provider</h2>
-          <span className="muted">This month · all-in</span>
+          <h2 id={headingId}>各服务商支出</h2>
+          <span className="muted">本月 · 总支出</span>
         </header>
         {parts.length === 0 ? (
           <div className="sp-body">
-            <p className="w-spend-empty muted">Nothing paid this month yet.</p>
+            <p className="w-spend-empty muted">本月还没有付费支出。</p>
           </div>
         ) : (
           <div className="sp-body">
@@ -124,15 +122,15 @@ export function SpendByProvider(props: { readonly summary: WalletSummary }) {
               <Ring parts={parts} colors={colors} active={active} onActive={setActive} />
               <div className="sp-center" aria-hidden="true">
                 <span className="sp-center-label">
-                  {focus === undefined ? "All-in this month" : sourceName(focus.provider)}
+                  {focus === undefined ? "本月总支出" : sourceName(focus.provider)}
                 </span>
                 <span className="sp-center-value num">
                   {money(focus === undefined ? all : focus.total)}
                 </span>
                 <span className="sp-center-meta">
                   {focus === undefined
-                    ? plural(parts.length, "provider paying", "providers paying")
-                    : `${shareFormat.format((focus.total / all) * 100)}% of all-in`}
+                    ? plural(parts.length, "个服务商有支出")
+                    : `占总支出 ${shareFormat.format((focus.total / all) * 100)}%`}
                 </span>
               </div>
             </div>
@@ -140,49 +138,49 @@ export function SpendByProvider(props: { readonly summary: WalletSummary }) {
             <p className="sp-legend" aria-hidden="true">
               <span className="sp-key">
                 <i data-kind="plan" />
-                Plan
+                套餐
               </span>
               <span className="sp-key">
                 <i data-kind="usage" />
-                Usage
+                用量
               </span>
               <span className="sp-key">
                 <i data-kind="topup" />
-                Top-ups
+                充值
               </span>
             </p>
             <table className="sp-table">
-              <caption className="sr">Where this month's money goes, by provider</caption>
+              <caption className="sr">本月的钱花在哪里，按服务商划分</caption>
               <thead>
                 <tr>
-                  <th scope="col">Provider</th>
-                  <th scope="col" className="sp-mix-head" aria-label="Mix">
+                  <th scope="col">服务商</th>
+                  <th scope="col" className="sp-mix-head" aria-label="构成">
                     <span className="sp-keys">
                       <span className="sp-key">
                         <i data-kind="plan" />
-                        Plan
+                        套餐
                       </span>
                       <span className="sp-key">
                         <i data-kind="usage" />
-                        Usage
+                        用量
                       </span>
                       <span className="sp-key">
                         <i data-kind="topup" />
-                        Top-ups
+                        充值
                       </span>
                     </span>
                   </th>
                   <th scope="col" className="sp-n">
-                    Plan
+                    套餐
                   </th>
                   <th scope="col" className="sp-n">
-                    Usage
+                    用量
                   </th>
                   <th scope="col" className="sp-n">
-                    Top-ups
+                    充值
                   </th>
-                  <th scope="col">Total</th>
-                  <th scope="col">Share</th>
+                  <th scope="col">合计</th>
+                  <th scope="col">占比</th>
                 </tr>
               </thead>
               <tbody>

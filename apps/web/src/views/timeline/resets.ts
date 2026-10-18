@@ -1,7 +1,8 @@
 import type { OverviewConnection } from "../../api.ts";
 import { isInactive, meterWindows } from "@headroom/view-model/accounts";
-import { countdown, shortDate, type Clock } from "@headroom/view-model/time";
+import { shortDate, type Clock } from "@headroom/view-model/time";
 import type { LimitsView } from "@headroom/view-model/tone";
+import { zhCountdown, zhDates, zhShort } from "../../lib/zh.ts";
 
 /**
  * The Recent Resets table: resets the owner did not start, from the account events of the last 7 days (ADR 0003).
@@ -18,12 +19,12 @@ export interface ResetRow {
   readonly at: number;
   /** The colour of the row's mark: early matches the Timeline marker, bank the banked-reset ticks. */
   readonly mark: ResetMark;
-  /** "Weekly", "Weekly Opus", or "Banked Resets" for a new one. */
+  /** "每周", "每周 Opus", or "已存重置" for a new one. */
   readonly limit: string;
   /** The row is about a limit, not the banked-reset inventory, so the phone list names the limit too. */
   readonly onLimit: boolean;
   readonly what: string;
-  /** A short second fact, such as "2 days early" or "Expires Oct 30". */
+  /** A short second fact, such as "提前2天" or "10月30日到期". */
   readonly detail: string | null;
   /** The figure that changed, in the owner's used or left view; null when there is none. */
   readonly change: string | null;
@@ -44,16 +45,18 @@ function shown(used: number, view: LimitsView): number {
   return view === "left" ? Math.max(0, 100 - used) : used;
 }
 
-/** How long before its scheduled reset the limit reset: "2 days 5 h early". */
+/** How long before its scheduled reset the limit reset: "提前2天5小时". */
 function early(at: number, due: number): string {
-  return `${countdown(due, at)} early`;
+  return `提前${zhCountdown(due, at)}`;
 }
 
 function rowsOf(connection: OverviewConnection, words: ResetWords): ResetRow[] {
   const meters = meterWindows(connection);
-  const limitOf = (key: string | null): string =>
-    meters.find((meter) => meter.key === key)?.short ?? "Limit";
-  const word = words.view === "left" ? "left" : "used";
+  const limitOf = (key: string | null): string => {
+    const short = meters.find((meter) => meter.key === key)?.short;
+    return short === undefined ? "额度" : zhShort(short);
+  };
+  const word = words.view === "left" ? "剩余" : "已用";
   const inactive = isInactive(connection);
   const rows: ResetRow[] = [];
   for (const event of connection.events) {
@@ -65,15 +68,15 @@ function rowsOf(connection: OverviewConnection, words: ResetWords): ResetRow[] {
         mark: detail.bankedUsed === true ? "bank" : "early",
         limit: limitOf(event.metricKey),
         onLimit: true,
-        what: detail.bankedUsed === true ? "Banked reset used outside Headroom" : "Reset early",
+        what: detail.bankedUsed === true ? "已存重置在 Headroom 之外被使用" : "提前重置",
         detail: early(event.occurredAt, detail.expectedResetAt),
-        change: `${pct(shown(detail.previousPercent, words.view))} → ${pct(shown(detail.percent, words.view))} ${word}`,
+        change: `${word} ${pct(shown(detail.previousPercent, words.view))} → ${pct(shown(detail.percent, words.view))}`,
       });
     } else if (detail.kind === "auto_reset") {
       const what = {
-        succeeded: "Auto-reset by Headroom",
-        failed: "Auto-reset failed",
-        uncertain: "Auto-reset not confirmed",
+        succeeded: "Headroom 自动重置",
+        failed: "自动重置失败",
+        uncertain: "自动重置未确认",
       }[detail.state];
       rows.push({
         ...base,
@@ -82,18 +85,18 @@ function rowsOf(connection: OverviewConnection, words: ResetWords): ResetRow[] {
         onLimit: true,
         what,
         detail: early(event.occurredAt, detail.resetsAt),
-        change: `At ${pct(shown(detail.percent, words.view))} ${word}`,
+        change: `${word} ${pct(shown(detail.percent, words.view))} 时`,
       });
     } else if (detail.kind === "reset_granted") {
       const claude = connection.provider === "claude";
       rows.push({
         ...base,
         mark: "bank",
-        limit: claude ? "Reset Grants" : "Banked Resets",
+        limit: claude ? "重置授权" : "已存重置",
         onLimit: false,
-        what: claude ? "New reset grant" : "New banked reset",
-        detail: detail.expiresAt === null ? null : `Expires ${shortDate(detail.expiresAt)}`,
-        change: detail.available === null ? null : `${detail.available} available`,
+        what: claude ? "新增重置授权" : "新增已存重置",
+        detail: detail.expiresAt === null ? null : `${zhDates(shortDate(detail.expiresAt))}到期`,
+        change: detail.available === null ? null : `可用 ${detail.available} 个`,
       });
     }
   }

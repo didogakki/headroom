@@ -80,7 +80,7 @@ export interface AccountStory {
   readonly primary: LimitStory;
   /** What the owner pays a month in US dollars, from the Wallet. Null when not set or not convertible. */
   readonly monthlyCost: number | null;
-  /** Why `monthlyCost` is null, in a few words: "Price not set", "Price in EUR, no rate". */
+  /** Why `monthlyCost` is null, in a few words: "未设置价格", "价格以 EUR 计，无汇率". */
   readonly priceNote: string;
 }
 
@@ -349,7 +349,7 @@ export function buildAnalytics(
       stale: connection.stale,
       primary,
       monthlyCost: monthlyCosts.get(connection.id) ?? null,
-      priceNote: priceNotes.get(connection.id) ?? "Price not set",
+      priceNote: priceNotes.get(connection.id) ?? "未设置价格",
     });
   }
   const firsts = known

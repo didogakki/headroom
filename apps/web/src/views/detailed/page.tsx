@@ -16,21 +16,21 @@ import { DetailedSkeleton } from "./skeleton.tsx";
 import "./detailed.css";
 
 const orders: readonly { readonly value: DetailedOrder; readonly label: string }[] = [
-  { value: "urgency", label: "By Urgency" },
-  { value: "provider", label: "By Provider" },
-  { value: "custom", label: "Custom" },
+  { value: "urgency", label: "按紧急程度" },
+  { value: "provider", label: "按服务商" },
+  { value: "custom", label: "自定义" },
 ];
 
 const limitViews = [
-  { value: "left", label: "Left" },
-  { value: "used", label: "Used" },
+  { value: "left", label: "剩余" },
+  { value: "used", label: "已用" },
 ] as const;
 
-/** "3 Accounts". Keeps the last count while its group folds away, so the words do not change on the way out. */
+/** "3 个账户". Keeps the last count while its group folds away, so the words do not change on the way out. */
 function AccountCount(props: { readonly count: number }) {
   const [shown, setShown] = useState(props.count);
   if (props.count > 0 && props.count !== shown) setShown(props.count);
-  return <span className="chip count">{`${shown} ${shown === 1 ? "Account" : "Accounts"}`}</span>;
+  return <span className="chip count">{`${shown} 个账户`}</span>;
 }
 
 function GroupHead(props: { readonly section: Section; readonly visible: number }) {
@@ -46,7 +46,7 @@ function GroupHead(props: { readonly section: Section; readonly visible: number 
   }
   return (
     <header className="d-group-head small">
-      <h2>Inactive</h2>
+      <h2>非活动</h2>
       <AccountCount count={props.visible} />
     </header>
   );
@@ -101,7 +101,7 @@ export function DetailedPage(props: ViewProps) {
       {stale ? <LoadFailed stale busy={retrying} onRetry={retry} /> : null}
       <div className="d-tools">
         <ProviderChips
-          label="Filter by provider"
+          label="按服务商筛选"
           value={active}
           onChange={setFilter}
           total={connections.length}
@@ -113,7 +113,7 @@ export function DetailedPage(props: ViewProps) {
         />
         <div className="d-segs">
           <Segmented
-            label="Order"
+            label="排序"
             value={order}
             options={orders}
             onChange={(next) => {
@@ -122,7 +122,7 @@ export function DetailedPage(props: ViewProps) {
             }}
           />
           <Segmented
-            label="Show limits as"
+            label="额度显示方式"
             value={settings.limitsView}
             options={limitViews}
             onChange={(limitsView) => void store.update({ limitsView })}

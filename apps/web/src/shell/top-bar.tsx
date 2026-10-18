@@ -24,12 +24,12 @@ export function TopBar(props: {
     <header className="top">
       <Lockup href={href({ page: "overview" })} />
       {props.view === null ? null : <ViewSwitcher active={props.view} />}
-      <nav aria-label="Page">
+      <nav aria-label="页面">
         {props.view === null ? (
-          <ButtonLink href={href({ page: "overview" })}>Back to Accounts</ButtonLink>
+          <ButtonLink href={href({ page: "overview" })}>返回账户</ButtonLink>
         ) : (
           <ButtonLink variant="primary" icon={<PlusIcon />} href={href({ page: "connect" })}>
-            Connect
+            连接
           </ButtonLink>
         )}
         <NotificationCentre notifications={props.notifications} />

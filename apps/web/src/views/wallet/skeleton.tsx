@@ -1,7 +1,8 @@
 import { PencilIcon, PlusIcon, TrashIcon } from "../../icons.tsx";
 import { useSettings } from "../../lib/settings.tsx";
 import { topUpMonthCount } from "@headroom/view-model/wallet";
-import { currencyName, currencySymbol } from "@headroom/view-model/wallet-money";
+import { currencySymbol } from "@headroom/view-model/wallet-money";
+import { zhCurrencyName } from "../../lib/zh.ts";
 import { Button } from "../../ui/button.tsx";
 import { Select } from "../../ui/select.tsx";
 import { cssVars } from "../../ui/css-vars.ts";
@@ -11,9 +12,9 @@ import "../../ui/spark-bars.css";
 import "./wallet.css";
 import "./spend.css";
 
-const statLabels = ["Subscriptions", "Usage Spend", "Top-Ups This Month", "All-In This Month"];
+const statLabels = ["订阅", "用量支出", "本月充值", "本月总支出"];
 const kinds = ["plan", "usage", "topup"] as const;
-const keyNames = ["Plan", "Usage", "Top-ups"] as const;
+const keyNames = ["套餐", "用量", "充值"] as const;
 const barHeights = [38, 62, 24, 80, 52, 100];
 const mixWidths = ["92%", "64%", "46%", "30%", "18%"];
 
@@ -23,10 +24,10 @@ function Tools() {
   const currency = useSettings().settings.walletCurrency ?? "USD";
   return (
     <div className="w-tools">
-      <h1 className="w-title">Wallet</h1>
+      <h1 className="w-title">钱包</h1>
       <div className="w-segs" inert aria-hidden="true">
         <Select
-          label="Currency"
+          label="币种"
           hideLabel
           size="sm"
           value={currency}
@@ -34,13 +35,13 @@ function Tools() {
             {
               value: currency,
               label: currency,
-              meta: `${currencySymbol(currency)} · ${currencyName(currency)}`,
+              meta: `${currencySymbol(currency)} · ${zhCurrencyName(currency)}`,
             },
           ]}
           onChange={() => undefined}
         />
         <Button variant="primary" size="sm" icon={<PlusIcon />} tabIndex={-1}>
-          Add Top-Up
+          添加充值
         </Button>
       </div>
     </div>
@@ -117,14 +118,14 @@ function SpendCard() {
     <section className="w-spend" aria-hidden="true">
       <div className="w-card">
         <header className="w-card-head">
-          <h2>Spend by Provider</h2>
-          <span className="muted">This month · all-in</span>
+          <h2>各服务商支出</h2>
+          <span className="muted">本月 · 总支出</span>
         </header>
         <div className="sp-body">
           <div className="sp-chart">
             <Sk kind="ring" width="100%" className="w-sk-ring" />
             <div className="sp-center">
-              <span className="sp-center-label">All-in this month</span>
+              <span className="sp-center-label">本月总支出</span>
               <span className="sp-center-value num">
                 <Sk kind="text" width={88} />
               </span>
@@ -139,23 +140,23 @@ function SpendCard() {
           <table className="sp-table">
             <thead>
               <tr>
-                <th scope="col">Provider</th>
+                <th scope="col">服务商</th>
                 <th scope="col" className="sp-mix-head">
                   <span className="sp-keys">
                     <KeyList />
                   </span>
                 </th>
                 <th scope="col" className="sp-n">
-                  Plan
+                  套餐
                 </th>
                 <th scope="col" className="sp-n">
-                  Usage
+                  用量
                 </th>
                 <th scope="col" className="sp-n">
-                  Top-ups
+                  充值
                 </th>
-                <th scope="col">Total</th>
-                <th scope="col">Share</th>
+                <th scope="col">合计</th>
+                <th scope="col">占比</th>
               </tr>
             </thead>
             <tbody>
@@ -178,8 +179,8 @@ function TopUpsGlance() {
     <section className="w-glance-card">
       <div className="w-card">
         <header className="w-card-head">
-          <h2>Top-Ups</h2>
-          <span className="muted">Last {topUpMonthCount} months</span>
+          <h2>充值</h2>
+          <span className="muted">最近 {topUpMonthCount} 个月</span>
         </header>
         <div className="w-card-body">
           <figure className="spark" style={cssVars({ "--plot": "120px" })}>
@@ -211,7 +212,7 @@ function RenewalsGlance() {
     <section className="w-glance-card">
       <div className="w-card">
         <header className="w-card-head">
-          <h2>Upcoming Renewals</h2>
+          <h2>即将到来的续订</h2>
           <span className="muted">
             <Sk kind="text" width={96} />
           </span>
@@ -281,7 +282,7 @@ function AccountRow(props: { readonly usedLabel: string }) {
           <Sk kind="text" width={170} />
         </span>
       </div>
-      <div className="w-col w-c-cost" data-label="Cost / Month">
+      <div className="w-col w-c-cost" data-label="费用 / 月">
         <span className="w-cost">
           <span className="w-figure num">
             <Sk kind="text" width={64} />
@@ -304,19 +305,19 @@ function AccountRow(props: { readonly usedLabel: string }) {
           <Sk kind="bar" height={6} className="w-sk-track" />
         </span>
       </div>
-      <div className="w-col w-c-renew" data-label="Renews">
+      <div className="w-col w-c-renew" data-label="续订">
         <span>
           <Sk kind="text" width={52} />
         </span>
       </div>
-      <div className="w-col w-c-spend" data-label="Usage Spend">
+      <div className="w-col w-c-spend" data-label="用量支出">
         <span className="w-cost">
           <span className="w-figure num">
             <Sk kind="text" width={52} />
           </span>
         </span>
       </div>
-      <div className="w-col w-c-credits" data-label="Credits">
+      <div className="w-col w-c-credits" data-label="积分">
         <span className="w-cost">
           <span className="w-figure num">
             <Sk kind="text" width={60} />
@@ -329,20 +330,20 @@ function AccountRow(props: { readonly usedLabel: string }) {
 }
 
 function AccountsCard() {
-  const usedLabel = useSettings().settings.limitsView === "left" ? "Left" : "Used";
+  const usedLabel = useSettings().settings.limitsView === "left" ? "剩余" : "已用";
   return (
     <section className="provider w-accounts" aria-hidden="true">
       <header>
-        <h2>Accounts</h2>
+        <h2>账户</h2>
       </header>
       <div className="w-card">
         <div className="w-colhead">
-          <span>Account</span>
-          <span>Cost / Month</span>
+          <span>账户</span>
+          <span>费用 / 月</span>
           <span>{usedLabel}</span>
-          <span>Renews</span>
-          <span>Usage Spend</span>
-          <span>Credits</span>
+          <span>续订</span>
+          <span>用量支出</span>
+          <span>积分</span>
           <span />
         </div>
         <ul className="w-rows">
@@ -369,7 +370,7 @@ function TopUpRow() {
           <Sk kind="text" width={150} />
         </span>
       </span>
-      <span className="w-credits num" data-label="Credits">
+      <span className="w-credits num" data-label="积分">
         <Sk kind="text" width={40} />
       </span>
       <span className="w-paid">
@@ -389,15 +390,15 @@ function TopUpsCard() {
   return (
     <section className="provider w-topups" aria-hidden="true">
       <header>
-        <h2>Top-Ups</h2>
+        <h2>充值</h2>
       </header>
       <div className="w-card">
         <div className="w-colhead">
-          <span>Date</span>
-          <span>Account</span>
-          <span>Credits</span>
-          <span>Price</span>
-          <span>Note</span>
+          <span>日期</span>
+          <span>账户</span>
+          <span>积分</span>
+          <span>价格</span>
+          <span>备注</span>
           <span />
         </div>
         <ul className="w-rows">
@@ -414,7 +415,7 @@ function TopUpsCard() {
 export function WalletSkeleton() {
   return (
     <div aria-busy="true" className="w-page">
-      <LoadingNote>Loading wallet</LoadingNote>
+      <LoadingNote>正在加载钱包</LoadingNote>
       <Tools />
       <Band />
       <div className="w-glance">

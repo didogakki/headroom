@@ -28,15 +28,15 @@ export function RowActions(props: {
   const paused = connection.state === "paused";
   const rename = (
     <MenuItem icon={<PencilIcon />} onSelect={() => handlers.onRename(connection)}>
-      Rename
+      重命名
     </MenuItem>
   );
   const remove = (
     <MenuItem danger icon={<CloseIcon />} onSelect={() => handlers.onRemove(connection)}>
-      {disconnected ? "Remove" : "Disconnect"}
+      {disconnected ? "移除" : "断开连接"}
     </MenuItem>
   );
-  const menuLabel = `More actions for ${props.name}`;
+  const menuLabel = `${props.name}的更多操作`;
   return (
     <span className="acts">
       {disconnected ? (
@@ -45,7 +45,7 @@ export function RowActions(props: {
           size="sm"
           href={reconnectHref(connection.id)}
           icon={<UnplugIcon />}
-          label="Reconnect"
+          label="重新连接"
           menuLabel={menuLabel}
         >
           {rename}
@@ -55,9 +55,9 @@ export function RowActions(props: {
         <SplitButton
           size="sm"
           icon={<PlayIcon />}
-          label="Resume"
+          label="恢复"
           busy={props.busy}
-          busyLabel="Resuming"
+          busyLabel="正在恢复"
           onClick={() => handlers.onPause(connection, false)}
           menuLabel={menuLabel}
         >
@@ -67,7 +67,7 @@ export function RowActions(props: {
               window.location.hash = reconnectHref(connection.id);
             }}
           >
-            Reconnect
+            重新连接
           </MenuItem>
           {rename}
           {remove}
@@ -80,7 +80,7 @@ export function RowActions(props: {
           triggerClassName="btn quiet sm kebab"
         >
           <MenuItem icon={<PauseIcon />} onSelect={() => handlers.onPause(connection, true)}>
-            Pause
+            暂停
           </MenuItem>
           <MenuItem
             icon={<UnplugIcon />}
@@ -88,7 +88,7 @@ export function RowActions(props: {
               window.location.hash = reconnectHref(connection.id);
             }}
           >
-            Reconnect
+            重新连接
           </MenuItem>
           {rename}
           {remove}

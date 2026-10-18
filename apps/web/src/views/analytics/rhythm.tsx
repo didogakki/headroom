@@ -20,6 +20,7 @@ import {
   weekdays,
   type Line,
 } from "./common.tsx";
+import { shortDate } from "./format.ts";
 import { hourOfWeek, slotCount, type AccountSeries, type Series } from "./series.ts";
 import "./rhythm.css";
 
@@ -30,17 +31,17 @@ import "./rhythm.css";
 
 type View = "matrix" | "weeks" | "range" | "accounts";
 const views = [
-  { value: "matrix", label: "Matrix" },
-  { value: "weeks", label: "Weeks" },
-  { value: "range", label: "Range" },
-  { value: "accounts", label: "By Account" },
+  { value: "matrix", label: "矩阵" },
+  { value: "weeks", label: "按周" },
+  { value: "range", label: "范围" },
+  { value: "accounts", label: "按账户" },
 ] as const satisfies readonly { readonly value: View; readonly label: string }[];
 const viewKeys: readonly View[] = views.map((entry) => entry.value);
 
 export function RhythmCard(props: { readonly series: Series }) {
   const [view, setView] = useStoredView<View>("rhythm", viewKeys, "matrix");
   return (
-    <ViewCard title="Rhythm" views={views} view={view} onView={setView}>
+    <ViewCard title="节律" views={views} view={view} onView={setView}>
       {view === "matrix" ? <Matrix series={props.series} /> : null}
       {view === "weeks" ? <Weeks series={props.series} /> : null}
       {view === "range" ? <RangeView series={props.series} /> : null}
@@ -51,15 +52,7 @@ export function RhythmCard(props: { readonly series: Series }) {
 
 /* ---------------------------------------------------------------- helpers */
 
-const longDays = [
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-  "Sunday",
-] as const;
+const longDays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"] as const;
 /** Grey ramp steps; the same numbers as the `.an2-cell[data-level]` rules in common.css. */
 const RAMP = [5, 18, 34, 54, 76] as const;
 /** Ramp steps for one account, which has four levels. */
@@ -72,9 +65,7 @@ const dangerMix = (percent: number): string =>
 /** A continuous grey for a share 0..1; the quietest cells fall back to a faint tint. */
 const shareFill = (share: number): string => fgMix(share < 0.06 ? 6 : 14 + share * 74);
 
-// One formatter, made once: toLocaleDateString builds a new one on every call.
-const dayFormat = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" });
-const fmtDay = (at: number): string => dayFormat.format(at);
+const fmtDay = shortDate;
 const hh = (hourValue: number): string => `${String(hourValue).padStart(2, "0")}:00`;
 /** "08:00-18:00". A word joiner on each side of the hyphen keeps the range on one line when the text wraps. */
 const hourSpan = (from: number, to: number): string => `${hh(from)}\u2060-\u2060${hh(to)}`;
@@ -85,8 +76,7 @@ const fmtTime = (at: number): string =>
     new Date(at).getMinutes(),
   ).padStart(2, "0")}`;
 const fmtHours = (hours: number): string =>
-  hours >= 48 ? `${Math.round(hours / 24)} days` : `${Math.round(hours)} h`;
-const plural = (count: number, word: string): string => `${count} ${word}${count === 1 ? "" : "s"}`;
+  hours >= 48 ? `${Math.round(hours / 24)}天` : `${Math.round(hours)}小时`;
 const midnight = (at: number): number => {
   const date = new Date(at);
   date.setHours(0, 0, 0, 0);
@@ -114,7 +104,7 @@ function valueAt(series: Series, account: AccountSeries | null, slot: number): n
 const isKnown = (value: number | null): value is number => value !== null;
 
 const fixedOrUnknown = (value: number | null | undefined): string =>
-  value === null || value === undefined ? "no data" : value.toFixed(1);
+  value === null || value === undefined ? "无数据" : value.toFixed(1);
 
 /** A polyline through the known values; an unknown value breaks the line. `at` gives the "x,y" of a point. */
 function trace(
@@ -136,11 +126,11 @@ const runsOf = (series: Series, account: AccountSeries | null) =>
 const labelOf = (series: Series, id: string): string =>
   series.accounts.find((account) => account.id === id)?.label ?? "";
 const unitOf = (account: AccountSeries | null): string =>
-  account === null ? "avg accounts active" : "avg pp used per hour";
+  account === null ? "平均活跃账户数" : "平均用量（百分点/小时）";
 const unitShort = (account: AccountSeries | null): string =>
-  account === null ? "accounts active" : "pp per hour";
+  account === null ? "活跃账户数" : "百分点/小时";
 const runText = (series: Series, run: Series["runouts"][number]): string =>
-  `Ran out ${fmtTime(run.at)}, locked ${fmtHours(Math.round((Math.min(run.until, series.now) - run.at) / hour))}`;
+  `${fmtTime(run.at)} 用尽，锁定${fmtHours(Math.round((Math.min(run.until, series.now) - run.at) / hour))}`;
 
 /** Average peak of an account's finished windows; the order of rows and lanes. */
 function averagePeak(account: AccountSeries): number {
@@ -173,23 +163,23 @@ function cellText(series: Series, account: AccountSeries | null, slot: number): 
   if (account === null) {
     const active = series.active[slot] ?? 0;
     const locked = series.locked[slot] ?? 0;
-    cap = `${active} of ${series.accounts.length} accounts active${locked > 0 ? `, ${locked} locked` : ""}`;
+    cap = `${series.accounts.length}个账户中有${active}个活跃${locked > 0 ? `，${locked}个已锁定` : ""}`;
   } else {
     const value = account.hourly[slot] ?? null;
     if (value === null) {
-      cap = `No reading${account.locked[slot] === true ? ", locked" : ""}`;
+      cap = `无读数${account.locked[slot] === true ? "，已锁定" : ""}`;
     } else {
       const ratio = value / account.evenHour;
-      cap = `${value.toFixed(1)} pp used, ${
-        ratio < 0.6 ? "quiet" : `${ratio.toFixed(1)}x even pace`
-      }${account.locked[slot] === true ? ", locked" : ""}`;
+      cap = `已用${value.toFixed(1)}百分点，${
+        ratio < 0.6 ? "清闲" : `${ratio.toFixed(1)}x 均速`
+      }${account.locked[slot] === true ? "，已锁定" : ""}`;
     }
   }
   const hit = runsOf(series, account).filter(
     (run) => Math.floor((run.at - series.from) / hour) === slot,
   );
   if (hit.length > 0) {
-    cap += `. ${hit.map((run) => `${labelOf(series, run.accountId)}: ${runText(series, run)}`).join("; ")}`;
+    cap += `。${hit.map((run) => `${labelOf(series, run.accountId)}：${runText(series, run)}`).join("；")}`;
   }
   return [big, cap];
 }
@@ -235,15 +225,15 @@ function summary(series: Series, account: AccountSeries | null) {
   const runs = runsOf(series, account);
   const weekdayRuns = runs.filter((run) => weekdayOf(run.at) < 5).length;
   const hours = runs.map((run) => hourOf(run.at));
-  const who = account === null ? "" : `${account.label}: `;
+  const who = account === null ? "" : `${account.label}：`;
   const cap =
     runs.length === 0
-      ? `${who}no run-outs in 30 days`
-      : `${who}${plural(runs.length, "run-out")} in 30 days, ${
-          weekdayRuns === runs.length ? "all on weekdays" : `${weekdayRuns} on weekdays`
-        }, ${hourSpan(Math.min(...hours), Math.max(...hours) + 1)}`;
+      ? `${who}30天内没有用尽`
+      : `${who}30天内用尽${runs.length}次，${
+          weekdayRuns === runs.length ? "均在工作日" : `其中${weekdayRuns}次在工作日`
+        }，${hourSpan(Math.min(...hours), Math.max(...hours) + 1)}`;
   const band = hourSpan(best, best + 3);
-  return { band, cap, big: `Busiest ${band} on weekdays` };
+  return { band, cap, big: `工作日最忙时段 ${band}` };
 }
 
 /** The calendar days covering the series, from the day of its start to today. */
@@ -393,7 +383,7 @@ function Matrix(props: { readonly series: Series }) {
         y={26}
         textAnchor="middle"
       >
-        {(weekdays[weekdayOf(at)] ?? "?").slice(0, 1)}
+        {(weekdays[weekdayOf(at)] ?? "?").slice(-1)}
       </text>,
     );
     if (weekend) {
@@ -488,7 +478,7 @@ function Matrix(props: { readonly series: Series }) {
     marginMarks = (
       <g>
         <text className="rh-t rh-t2" x={px0} y={10}>
-          Day profile
+          日内曲线
         </text>
         <text className="rh-t" x={px0} y={24}>
           {unitOf(account)}
@@ -524,9 +514,9 @@ function Matrix(props: { readonly series: Series }) {
               width={width - px0 + 6}
               height={rh}
               {...bind(
-                `${hh(h)} on a typical day`,
-                `Weekdays ${fixedOrUnknown(profile.wd[h])} · weekends ${fixedOrUnknown(profile.we[h])} ${unitShort(account)}${
-                  n > 0 ? ` · ${plural(n, "run-out")}` : ""
+                `典型一天的 ${hh(h)}`,
+                `工作日 ${fixedOrUnknown(profile.wd[h])} · 周末 ${fixedOrUnknown(profile.we[h])}（${unitShort(account)}）${
+                  n > 0 ? ` · 用尽${n}次` : ""
                 }`,
               )}
             />
@@ -548,7 +538,7 @@ function Matrix(props: { readonly series: Series }) {
           y={sy + 7}
           textAnchor={narrow ? "start" : "end"}
         >
-          Locked
+          锁定
         </text>
         {Array.from({ length: columns }, (_, d) => {
           let locked = 0;
@@ -580,7 +570,7 @@ function Matrix(props: { readonly series: Series }) {
                   y={sy}
                   width={Math.max(0, cw - 1)}
                   height={8}
-                  {...bind(fmtDay(atDay(d)), `${locked} of ${known} h with an account locked`)}
+                  {...bind(fmtDay(atDay(d)), `${known}小时中有${locked}小时存在账户被锁定`)}
                 />
               ) : null}
             </g>
@@ -595,9 +585,9 @@ function Matrix(props: { readonly series: Series }) {
     account === null
       ? series.accounts.toSorted((p, q) => averagePeak(q) - averagePeak(p))
       : [account];
-  const aria = `Heatmap of ${account === null ? "accounts active" : `${account.label} usage`} by day and hour, 30 days. ${sm.big}. ${sm.cap}.`;
+  const aria = `热力图：${account === null ? "活跃账户数" : `${account.label} 的用量`}，按日期和小时，共30天。${sm.big}。${sm.cap}。`;
   const rampLabels =
-    account === null ? rampCounts(series.accounts.length) : ["Quiet", "Even", "2x", "3x+"];
+    account === null ? rampCounts(series.accounts.length) : ["清闲", "均速", "2x", "3x+"];
   const rampSteps = account === null ? [0, 1, 2, 3, 4] : [...ONE_LEVELS];
 
   return (
@@ -620,7 +610,7 @@ function Matrix(props: { readonly series: Series }) {
         {readout.tipNode}
       </div>
       <Legend>
-        <span>{account === null ? "Accounts active" : "Hour vs. even pace"}</span>
+        <span>{account === null ? "活跃账户数" : "每小时用量与均速之比"}</span>
         {rampSteps.map((step, index) => (
           <span key={step}>
             <Swatch kind="ramp" level={step} />
@@ -629,23 +619,23 @@ function Matrix(props: { readonly series: Series }) {
         ))}
         <span>
           <Swatch kind="band" />
-          Locked
+          锁定
         </span>
         <span>
           <Swatch kind="dot" />
-          Ran out
+          已用尽
         </span>
         <span>
           <Swatch kind="line" />
-          Weekday
+          工作日
         </span>
         <span>
           <Swatch kind="dash" />
-          Weekend
+          周末
         </span>
-        <span>Dotted: no reading.</span>
+        <span>点状：无读数。</span>
       </Legend>
-      <section className="rh-windows" aria-label="Usage per window">
+      <section className="rh-windows" aria-label="每个窗口的用量">
         <button
           type="button"
           className="rh-disclose"
@@ -655,8 +645,8 @@ function Matrix(props: { readonly series: Series }) {
           <svg className="rh-chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
             <path d="M4 2.5 7.5 6 4 9.5" />
           </svg>
-          <span className="rh-disclose-title">Usage per window</span>
-          <span className="rh-disclose-hint">How full each limit window got</span>
+          <span className="rh-disclose-title">每个窗口的用量</span>
+          <span className="rh-disclose-hint">每个额度窗口用到了多满</span>
         </button>
         {lanes && width > 0 ? (
           <WindowStrips
@@ -725,10 +715,10 @@ function WindowStrips(props: {
                   const x1 = x(curve.start);
                   const x2 = x(curve.end);
                   const hit = curve.hitAt !== null;
-                  const big = `${account.label} · ${fmtDay(curve.start)} to ${fmtDay(curve.end)}`;
-                  const cap = `Peak ${Math.round(curve.peak)}%${curve.current ? " so far" : ""}${
+                  const big = `${account.label} · ${fmtDay(curve.start)} 至 ${fmtDay(curve.end)}`;
+                  const cap = `峰值${Math.round(curve.peak)}%${curve.current ? "（截至目前）" : ""}${
                     curve.hitAt !== null && curve.lockEnd !== null
-                      ? `, locked ${fmtHours((curve.lockEnd - curve.hitAt) / hour)}`
+                      ? `，锁定${fmtHours((curve.lockEnd - curve.hitAt) / hour)}`
                       : ""
                   }`;
                   return (
@@ -766,20 +756,20 @@ function WindowStrips(props: {
         </div>
       )}
       <Legend>
-        <span>Window peak</span>
+        <span>窗口峰值</span>
         {[1, 2, 3, 4].map((step, index) => (
           <span key={step}>
             <Swatch kind="ramp" level={step} />
-            {["Under 40%", "40-60%", "60-80%", "80-99%"][index]}
+            {["低于40%", "40-60%", "60-80%", "80-99%"][index]}
           </span>
         ))}
         <span>
           <i className="rh-sw-hit" aria-hidden="true" />
-          Hit the limit
+          触达上限
         </span>
         <span>
           <i className="rh-sw-now" aria-hidden="true" />
-          This window
+          当前窗口
         </span>
       </Legend>
     </div>
@@ -816,7 +806,7 @@ function Weeks(props: { readonly series: Series }) {
       bestDay = d;
     }
   });
-  const base: Line = { big: `Busiest ${longDays[bestDay] ?? ""}, ${sm.band}`, cap: sm.cap };
+  const base: Line = { big: `${longDays[bestDay] ?? ""}最忙，${sm.band}`, cap: sm.cap };
   const readout = useReadout(base);
   const { bind, bindLazy } = readout;
 
@@ -987,10 +977,10 @@ function Weeks(props: { readonly series: Series }) {
     const rowRuns = runs.filter((r) => r.at >= ws && r.at < we);
     const gutterText =
       rowRuns.length > 0
-        ? `${plural(rowRuns.length, "run-out")} · ${lockedHours} h locked`
+        ? `用尽${rowRuns.length}次 · 锁定${lockedHours}小时`
         : lockedHours > 0
-          ? `No run-outs · ${lockedHours} h locked`
-          : "Quiet";
+          ? `无用尽 · 锁定${lockedHours}小时`
+          : "清闲";
     rows.push(
       <g key={ws}>
         {frame(rowTop, rowH)}
@@ -1034,7 +1024,7 @@ function Weeks(props: { readonly series: Series }) {
     ws = we;
   }
 
-  const aria = `Typical week, then one row per week of ${account === null ? "accounts active" : `${account.label} usage`}. ${base.big}. ${sm.cap}.`;
+  const aria = `典型周，其后每周一行，内容为${account === null ? "活跃账户数" : `${account.label} 的用量`}。${base.big}。${sm.cap}。`;
   return (
     <div className="rh-view">
       <CardTop
@@ -1053,17 +1043,17 @@ function Weeks(props: { readonly series: Series }) {
                 y={10}
                 textAnchor="middle"
               >
-                {narrow ? name.slice(0, 1) : name}
+                {narrow ? name.slice(-1) : name}
               </text>
             ))}
             {frame(y0, hT)}
             <line className="rh-grid" x1={px} x2={px + pw} y1={tb} y2={tb} />
             <text className="rh-t rh-t2" x={0} y={y0 + 30}>
-              {narrow ? "Typical" : "Typical week"}
+              {narrow ? "典型" : "典型周"}
             </text>
             {narrow ? null : (
               <text className="rh-t" x={0} y={y0 + 44}>
-                avg per hour
+                每小时平均
               </text>
             )}
             <path className="rh-area-soft" d={typicalArea} />
@@ -1077,20 +1067,20 @@ function Weeks(props: { readonly series: Series }) {
                 width={hw}
                 height={hT}
                 {...bind(
-                  `${weekdays[Math.floor(i / 24)] ?? ""} ${hh(i % 24)} in a typical week`,
+                  `典型周的${weekdays[Math.floor(i / 24)] ?? ""} ${hh(i % 24)}`,
                   value === null
-                    ? "No data in this hour of the week"
-                    : `${value.toFixed(1)} ${unitShort(account)} · avg of ${plural(counts[i] ?? 0, "week")}`,
+                    ? "每周的这个小时没有数据"
+                    : `${value.toFixed(1)}（${unitShort(account)}）· ${counts[i] ?? 0}周的平均值`,
                 )}
               />
             ))}
             {narrow ? null : (
               <g>
                 <text className="rh-t rh-t2" x={px + pw + 14} y={y0 + 30}>
-                  Peak {maxT.toFixed(1)} {unitShort(account)}
+                  峰值 {maxT.toFixed(1)} {unitShort(account)}
                 </text>
                 <text className="rh-t" x={px + pw + 14} y={y0 + 44}>
-                  Mean of {Math.round((slotCount / 168) * 10) / 10} weeks
+                  {Math.round((slotCount / 168) * 10) / 10}周的均值
                 </text>
               </g>
             )}
@@ -1102,23 +1092,23 @@ function Weeks(props: { readonly series: Series }) {
       <Legend>
         <span>
           <Swatch kind="fill" />
-          {account === null ? "Accounts active per hour" : "pp used per hour"}
+          {account === null ? "每小时活跃账户数" : "每小时用量（百分点）"}
         </span>
         <span>
           <Swatch kind="lock" />
-          Locked{account === null ? " (darker: more accounts)" : ""}
+          锁定{account === null ? "（越深账户越多）" : ""}
         </span>
         <span>
           <Swatch kind="dot" />
-          Ran out
+          已用尽
         </span>
         <span>
           <Swatch kind="ramp" level={0} />
-          Night, 00-07
+          夜间 00-07
         </span>
         <span>
           <Swatch kind="line" />
-          Typical week
+          典型周
         </span>
       </Legend>
     </div>
@@ -1132,7 +1122,7 @@ const shorten = (text: string, max: number): string =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text;
 const typicalKey = (i: number): string => `t${weekdays[Math.floor(i / 24)] ?? ""}${i % 24}`;
 const rangeDays = slotCount / 24;
-const fixed = (value: number | null): string => (value === null ? "none" : value.toFixed(1));
+const fixed = (value: number | null): string => (value === null ? "无" : value.toFixed(1));
 
 function rangeStats(
   series: Series,
@@ -1231,13 +1221,12 @@ function RangeView(props: { readonly series: Series }) {
   );
 
   const rangeText = `${fmtDay(series.from + range[0] * day)} - ${fmtDay(series.from + range[1] * day)}`;
-  const who = stats.single !== null ? stats.single.label : `${stats.chosen.length} accounts`;
+  const who = stats.single !== null ? stats.single.label : `${stats.chosen.length}个账户`;
   const baseBig =
     stats.best < 0
-      ? "No activity in range"
-      : `Busiest ${weekdays[Math.floor(stats.best / 24)] ?? ""} ${hh(stats.best % 24)}`;
-  const baseCap =
-    stats.best < 0 ? `${who} · ${rangeText}` : `${plural(stats.outs.length, "run-out")} in range`;
+      ? "所选范围内没有活动"
+      : `最忙 ${weekdays[Math.floor(stats.best / 24)] ?? ""} ${hh(stats.best % 24)}`;
+  const baseCap = stats.best < 0 ? `${who} · ${rangeText}` : `范围内用尽${stats.outs.length}次`;
   const base: Line = { big: baseBig, cap: baseCap };
   const readout = useReadout(base);
   const { bind } = readout;
@@ -1269,7 +1258,7 @@ function RangeView(props: { readonly series: Series }) {
     let lockedHours = 0;
     for (let slot = stats.k0; slot < stats.k1; slot += 1)
       if (entry.locked[slot] === true) lockedHours += 1;
-    return `Avg peak ${Math.round(averagePeak(entry))}% · locked ${lockedHours} h · ${plural(nOut, "run-out")} in range`;
+    return `平均峰值${Math.round(averagePeak(entry))}% · 锁定${lockedHours}小时 · 范围内用尽${nOut}次`;
   };
   const edgeNear = (px: number): boolean =>
     Math.abs(px - xd(range[0])) < 7 || Math.abs(px - xd(range[1] + 1)) < 7;
@@ -1331,7 +1320,7 @@ function RangeView(props: { readonly series: Series }) {
   const profH = 70;
   const profBase = profTop + profH;
   const heatHeight = profBase + 34;
-  const unit = stats.single !== null ? "× its even pace" : "accounts active on average";
+  const unit = stats.single !== null ? "倍均速" : "个活跃账户（平均）";
   const profMax = Math.max(
     0.0001,
     ...stats.wk.filter((value): value is number => value !== null),
@@ -1348,7 +1337,7 @@ function RangeView(props: { readonly series: Series }) {
       )
       .join("");
 
-  const aria = `Weekday by hour heatmap of ${who}, ${rangeText}. ${baseBig}. ${baseCap}.`;
+  const aria = `${who} 的星期与小时热力图，${rangeText}。${baseBig}。${baseCap}。`;
   const allOn = selected.size === series.accounts.length;
   const axisStep = plotWidth < 420 ? 10 : 5;
   const axisDays = Array.from({ length: rangeDays / axisStep }, (_, i) => i * axisStep);
@@ -1359,12 +1348,12 @@ function RangeView(props: { readonly series: Series }) {
         <div className="rh-top">
           <div className="an2-ro">
             <p className="an2-ro-big">{rangeText}</p>
-            <p className="an2-ro-cap">{who} · drag across the lanes to change the range</p>
+            <p className="an2-ro-cap">{who} · 在各条通道上拖动可更改范围</p>
           </div>
           <div className="an2-tools">
-            <fieldset className="seg" aria-label="Accounts in range">
+            <fieldset className="seg" aria-label="范围内的账户">
               <button type="button" aria-pressed={allOn} onClick={() => setExcluded(new Set())}>
-                All Accounts
+                全部账户
               </button>
             </fieldset>
             {stacked ? switcher : null}
@@ -1385,7 +1374,7 @@ function RangeView(props: { readonly series: Series }) {
                 </text>
               ))}
               <text className="rh-t" x={plotWidth} y={12} textAnchor="end">
-                Today
+                今天
               </text>
             </svg>
             <div className="rh-body">
@@ -1439,17 +1428,17 @@ function RangeView(props: { readonly series: Series }) {
         <Legend>
           <span>
             <Swatch kind="fill" />
-            Window filling
+            窗口用量
           </span>
           <span>
             <Swatch kind="lock" />
-            Locked
+            锁定
           </span>
           <span>
             <Swatch kind="ramp" level={1} />
-            Selected days
+            所选日期
           </span>
-          <span>Click a name to toggle it.</span>
+          <span>点击名称可切换显示。</span>
         </Legend>
       </div>
       <div className="an2-panel" ref={panelBox}>
@@ -1481,7 +1470,7 @@ function RangeView(props: { readonly series: Series }) {
                         width={Math.max(0, cellW - 2)}
                         height={cellH}
                         rx={3}
-                        {...bind(`${name} ${hh(h)}`, "No known hour")}
+                        {...bind(`${name} ${hh(h)}`, "该小时无已知数据")}
                       />
                     );
                   }
@@ -1498,7 +1487,7 @@ function RangeView(props: { readonly series: Series }) {
                         style={{ fill: shareFill(stats.max > 0 ? value / stats.max : 0) }}
                         {...bind(
                           `${name} ${hh(h)}`,
-                          `${value.toFixed(1)} ${unit}${n > 0 ? ` · ${plural(n, "run-out")}` : ""}`,
+                          `${value.toFixed(1)}${unit}${n > 0 ? ` · 用尽${n}次` : ""}`,
                         )}
                       />
                       {n > 0 ? (
@@ -1564,7 +1553,7 @@ function RangeView(props: { readonly series: Series }) {
                   x2={x}
                   y1={profBase + 3}
                   y2={profBase + 12}
-                  {...bind(labelOf(series, run.accountId), `Ran out ${fmtTime(run.at)}`)}
+                  {...bind(labelOf(series, run.accountId), `${fmtTime(run.at)} 用尽`)}
                 />
               );
             })}
@@ -1578,7 +1567,7 @@ function RangeView(props: { readonly series: Series }) {
                 height={profH}
                 {...bind(
                   hh(h),
-                  `Weekday ${fixed(stats.wk[h] ?? null)} · weekend ${fixed(stats.we[h] ?? null)} ${unit}`,
+                  `工作日 ${fixed(stats.wk[h] ?? null)} · 周末 ${fixed(stats.we[h] ?? null)}${unit}`,
                 )}
               />
             ))}
@@ -1586,7 +1575,7 @@ function RangeView(props: { readonly series: Series }) {
         ) : null}
         <Legend>
           <span>
-            {stats.single !== null ? "Quiet" : "Few active"}
+            {stats.single !== null ? "清闲" : "活跃少"}
             {[0, 0.25, 0.5, 0.75, 1].map((q) => (
               <i
                 key={q}
@@ -1595,21 +1584,21 @@ function RangeView(props: { readonly series: Series }) {
                 aria-hidden="true"
               />
             ))}
-            {stats.single !== null ? "Fastest" : "Most active"}
+            {stats.single !== null ? "最快" : "最活跃"}
           </span>
           <span>
             <Swatch kind="dot" />
-            Ran out
+            已用尽
           </span>
           <span>
             <Swatch kind="line" />
-            Weekday
+            工作日
           </span>
           <span>
             <Swatch kind="dash" />
-            Weekend
+            周末
           </span>
-          <span>Dotted: no known hour.</span>
+          <span>点状：该小时无已知数据。</span>
         </Legend>
       </div>
       {readout.tipNode}
@@ -1621,11 +1610,11 @@ function RangeView(props: { readonly series: Series }) {
 
 type Mode = "wd" | "we" | "all";
 const modes = [
-  { value: "wd", label: "Weekdays" },
-  { value: "we", label: "Weekends" },
-  { value: "all", label: "All days" },
+  { value: "wd", label: "工作日" },
+  { value: "we", label: "周末" },
+  { value: "all", label: "全部日期" },
 ] as const satisfies readonly { readonly value: Mode; readonly label: string }[];
-const modeText: Record<Mode, string> = { all: "all days", wd: "weekdays", we: "weekends" };
+const modeText: Record<Mode, string> = { all: "全部日期", wd: "工作日", we: "周末" };
 
 function ByAccount(props: { readonly series: Series }) {
   const { series } = props;
@@ -1711,7 +1700,7 @@ function ByAccount(props: { readonly series: Series }) {
         begin = null;
       }
     }
-    return parts.join(" and ");
+    return parts.join(" 和 ");
   };
   const worst = rows
     .map((row) => ({ row, n: row.outs.reduce((total, value) => total + value, 0) }))
@@ -1722,8 +1711,8 @@ function ByAccount(props: { readonly series: Series }) {
       : [];
   const first =
     worst !== undefined && worst.n > 0
-      ? `${worst.row.account.label} runs out around ${hourSpan(Math.min(...outHours), Math.max(...outHours) + 1)}`
-      : `No account ran out on ${modeText[mode]}`;
+      ? `${worst.row.account.label} 多在 ${hourSpan(Math.min(...outHours), Math.max(...outHours) + 1)} 前后用尽`
+      : `${modeText[mode]}没有账户用尽`;
   const counts = Array.from(
     { length: 24 },
     (_, h) => rows.filter((row) => (row.share[h] ?? 0) >= 0.75 && row.share[h] !== null).length,
@@ -1733,7 +1722,7 @@ function ByAccount(props: { readonly series: Series }) {
     .map((value, h) => (maxCount > 0 && value >= Math.max(1, Math.ceil(maxCount * 0.75)) ? h : -1))
     .filter((h) => h >= 0);
   const baseCap =
-    peakHours.length > 0 ? `Most accounts peak ${spanText(peakHours)}` : "No clear shared peak";
+    peakHours.length > 0 ? `多数账户在 ${spanText(peakHours)} 达到峰值` : "没有明显的共同高峰";
   const base: Line = { big: first, cap: baseCap };
   const readout = useReadout(base);
   const { bind } = readout;
@@ -1751,13 +1740,13 @@ function ByAccount(props: { readonly series: Series }) {
   const rowH = 26;
   const ch = 20;
   const height = hy + rows.length * rowH + 2;
-  const aria = `Average use by hour on ${modeText[mode]}. Each row has its own scale. ${first}. ${baseCap}.`;
+  const aria = `${modeText[mode]}的每小时平均用量。每行使用各自的刻度。${first}。${baseCap}。`;
 
   return (
     <div className="rh-view">
       <CardTop
         headline={readout.headline}
-        tools={<Segmented label="Days" value={mode} onChange={setMode} options={modes} />}
+        tools={<Segmented label="日期" value={mode} onChange={setMode} options={modes} />}
       />
       <div className="rh-box" ref={box}>
         {width > 0 ? (
@@ -1773,18 +1762,18 @@ function ByAccount(props: { readonly series: Series }) {
             <path className="rh-area-soft" d={`${line}L${xc(23)},${aBase}L${xc(0)},${aBase}Z`} />
             <path className="rh-line" d={line} />
             <text className="rh-t rh-t3" x={0} y={aTop + 22}>
-              All accounts
+              全部账户
             </text>
             <text className="rh-t" x={0} y={aTop + 38}>
-              Average active
+              平均活跃数
             </text>
             {narrow ? null : (
               <g>
                 <text className="rh-t rh-t2" x={left + cols + 10} y={aTop + 22}>
-                  Peak {avgMax.toFixed(1)}
+                  峰值 {avgMax.toFixed(1)}
                 </text>
                 <text className="rh-t" x={left + cols + 10} y={aTop + 38}>
-                  accounts active
+                  活跃账户数
                 </text>
               </g>
             )}
@@ -1797,8 +1786,8 @@ function ByAccount(props: { readonly series: Series }) {
                 width={cw}
                 height={aH}
                 {...bind(
-                  `${hh(h)}, all accounts`,
-                  `${value.toFixed(1)} accounts active on average (${modeText[mode]})`,
+                  `${hh(h)}，全部账户`,
+                  `平均${value.toFixed(1)}个活跃账户（${modeText[mode]}）`,
                 )}
               />
             ))}
@@ -1814,8 +1803,8 @@ function ByAccount(props: { readonly series: Series }) {
             )}
             {rows.map((row, i) => {
               const y = hy + i * rowH;
-              const rowCap = `${row.peakHour < 0 ? "No data" : `Busiest hour ${hh(row.peakHour)}`} · ${
-                row.total > 0 ? `locked ${row.total} h in 30 days` : "never locked"
+              const rowCap = `${row.peakHour < 0 ? "无数据" : `最忙小时 ${hh(row.peakHour)}`} · ${
+                row.total > 0 ? `30天内锁定${row.total}小时` : "从未锁定"
               }`;
               return (
                 <g key={row.account.id}>
@@ -1830,7 +1819,7 @@ function ByAccount(props: { readonly series: Series }) {
                     y={y + ch / 2 + 4}
                     textAnchor="end"
                   >
-                    {row.total > 0 ? `Locked ${row.total} h` : "Never locked"}
+                    {row.total > 0 ? `锁定${row.total}小时` : "从未锁定"}
                   </text>
                   <rect
                     className="rh-hit"
@@ -1848,10 +1837,10 @@ function ByAccount(props: { readonly series: Series }) {
                     const often = lockFrac >= 0.05;
                     const bits = [
                       share === null
-                        ? "No known hour"
-                        : `${Math.round(share * 100)}% of its busiest hour`,
-                      nOut > 0 ? plural(nOut, "run-out") : "",
-                      often ? `locked ${Math.round(lockFrac * 100)}% of the time` : "",
+                        ? "该小时无已知数据"
+                        : `为其最忙小时的${Math.round(share * 100)}%`,
+                      nOut > 0 ? `用尽${nOut}次` : "",
+                      often ? `${Math.round(lockFrac * 100)}%的时间被锁定` : "",
                     ].filter((bit) => bit !== "");
                     return (
                       <g key={h}>
@@ -1863,7 +1852,7 @@ function ByAccount(props: { readonly series: Series }) {
                           width={Math.max(0, cw - 2)}
                           height={ch}
                           rx={3}
-                          {...bind(`${row.account.label} at ${hh(h)}`, bits.join(" · "))}
+                          {...bind(`${row.account.label} · ${hh(h)}`, bits.join(" · "))}
                         />
                         {nOut > 0 ? (
                           <g className="rh-over">
@@ -1897,23 +1886,23 @@ function ByAccount(props: { readonly series: Series }) {
       </div>
       <Legend>
         <span>
-          Quiet
+          清闲
           {[0, 0.25, 0.5, 0.75, 1].map((q) => (
             <i key={q} className="an2-sw" style={{ background: shareFill(q) }} aria-hidden="true" />
           ))}
-          Busiest hour
+          最忙小时
         </span>
-        <span>Each row has its own scale.</span>
+        <span>每行使用各自的刻度。</span>
         <span>
           <Swatch kind="dot" />
-          Ran out
+          已用尽
         </span>
         <span>
           <Swatch kind="lock" />
-          Locked (darker: more often)
+          锁定（越深越频繁）
         </span>
-        <span>Averages skip locked hours. Dotted: no known hour.</span>
-        <span>Top row counts accounts, not percentages.</span>
+        <span>平均值不含锁定的小时。点状：该小时无已知数据。</span>
+        <span>顶部一行统计的是账户数，不是百分比。</span>
       </Legend>
     </div>
   );

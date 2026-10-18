@@ -113,15 +113,15 @@ export function TelegramFlow(props: {
       ) : null}
       {stage === "test" && chat !== null ? (
         <TestStep
-          lead={`Send a test message to ${chatName}.`}
+          lead={`向${chatName}发送一条测试消息。`}
           identity={identity}
           onIdentity={setIdentity}
-          sendLabel="Send Test Message"
+          sendLabel="发送测试消息"
           send={send}
           failureText={(code) => testProblem("telegram", code)}
-          okTitle="Test Sent"
-          okNote="Check Telegram for the message."
-          finishLabel="It Arrived"
+          okTitle="测试已发送"
+          okNote="请在 Telegram 中查看这条消息。"
+          finishLabel="已收到"
           finish={save}
           onFinished={() => setStage("done")}
           onBack={() => setStage("second")}
@@ -130,12 +130,12 @@ export function TelegramFlow(props: {
       ) : null}
       {stage === "done" ? (
         <>
-          <Result ok title="Telegram Is Set Up">
-            {`Notices will arrive in ${chatName}.`}
+          <Result ok title="Telegram 已设置完成">
+            {`通知将发送到${chatName}。`}
           </Result>
           <div className="dl-actions">
             <Button variant="primary" onClick={props.onDone}>
-              Done
+              完成
             </Button>
           </div>
         </>

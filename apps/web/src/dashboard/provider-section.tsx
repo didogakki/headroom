@@ -36,7 +36,7 @@ export function ProviderSection(props: {
         <header>
           <BrandMark provider={provider} />
           <h2 id={headingId}>{providerName(provider)}</h2>
-          {left > 1 ? <span className="chip count">{left} Accounts</span> : null}
+          {left > 1 ? <span className="chip count">{left} 个账户</span> : null}
         </header>
         <div className="stack">
           {connections.map((connection) => (

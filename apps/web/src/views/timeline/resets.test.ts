@@ -70,17 +70,17 @@ describe("resetRows", () => {
   test("lists resets the owner did not start, newest first, and leaves out top-ups", () => {
     const rows = resetRows([codex, claude], words);
     expect(rows.map((row) => [row.id, row.mark, row.limit, row.what, row.change])).toEqual([
-      ["e", "early", "Weekly", "Reset early", "64% → 1% used"],
-      ["g", "bank", "Reset Grants", "New reset grant", "2 available"],
-      ["a", "bad", "Weekly", "Auto-reset failed", "At 96% used"],
-      ["b", "bank", "Weekly", "Banked reset used outside Headroom", "78% → 1% used"],
+      ["e", "early", "每周", "提前重置", "已用 64% → 1%"],
+      ["g", "bank", "重置授权", "新增重置授权", "可用 2 个"],
+      ["a", "bad", "每周", "自动重置失败", "已用 96% 时"],
+      ["b", "bank", "每周", "已存重置在 Headroom 之外被使用", "已用 78% → 1%"],
     ]);
-    expect(rows[0]?.detail).toBe("1 day 1 h early");
+    expect(rows[0]?.detail).toBe("提前1天1小时");
     expect(rows[1]?.detail).toBeNull();
   });
 
   test("follows the left view", () => {
     const [row] = resetRows([codex], { ...words, view: "left" });
-    expect(row?.change).toBe("36% → 99% left");
+    expect(row?.change).toBe("剩余 36% → 99%");
   });
 });

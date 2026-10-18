@@ -28,7 +28,7 @@ function OpenLink(props: {
 function CancelButton(props: { readonly onCancel: () => void; readonly disabled?: boolean }) {
   return (
     <Button variant="quiet" disabled={props.disabled === true} onClick={props.onCancel}>
-      Cancel
+      取消
     </Button>
   );
 }
@@ -67,12 +67,12 @@ function PasteStage(
   return (
     <form className="stage" onSubmit={submit}>
       <Lead>
-        Open the {props.provider} sign-in page and sign in.{" "}
+        打开 {props.provider} 登录页并登录。{" "}
         {accepts === "code"
-          ? "Paste the code it shows here."
+          ? "把它显示的代码粘贴到这里。"
           : accepts === "url"
-            ? "When it lands on a page that will not load, paste that address here."
-            : "Paste the code it shows, or the address of the page that will not load."}
+            ? "当它跳转到一个打不开的页面时，把那个地址粘贴到这里。"
+            : "粘贴它显示的代码，或那个打不开的页面的地址。"}
       </Lead>
       <div className="field">
         <label htmlFor={id}>{acceptsLabel(accepts)}</label>
@@ -88,11 +88,11 @@ function PasteStage(
         />
       </div>
       <div className="row">
-        <Button type="submit" variant="primary" busy={props.busy} busyLabel="Sending">
-          Continue
+        <Button type="submit" variant="primary" busy={props.busy} busyLabel="正在发送">
+          继续
         </Button>
         <OpenLink url={step.url} primary={false}>
-          {`Open ${props.provider} Sign-In`}
+          {`打开 ${props.provider} 登录页`}
         </OpenLink>
         <CancelButton onCancel={props.onCancel} />
       </div>
@@ -129,14 +129,14 @@ function KeyStage(
         </div>
       ))}
       <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-        The key is encrypted at rest and never shown again.
+        密钥会被加密保存，且不会再次显示。
       </p>
       <div className="row">
-        <Button type="submit" variant="primary" busy={props.busy} busyLabel="Sending">
-          Connect
+        <Button type="submit" variant="primary" busy={props.busy} busyLabel="正在发送">
+          连接
         </Button>
         <OpenLink url={step.keyPageUrl} primary={false}>
-          {`Open ${props.provider} Key Page`}
+          {`打开 ${props.provider} 密钥页面`}
         </OpenLink>
         <CancelButton onCancel={props.onCancel} />
       </div>
@@ -161,7 +161,7 @@ function FileStage(
     <form className="stage" onSubmit={submit}>
       {step.hint === "" ? null : <Lead>{step.hint}</Lead>}
       <div className="field">
-        <label htmlFor={id}>{`Contents of ${step.expectedFileName}`}</label>
+        <label htmlFor={id}>{`${step.expectedFileName} 的内容`}</label>
         <textarea
           id={id}
           value={contents}
@@ -173,8 +173,8 @@ function FileStage(
         />
       </div>
       <div className="row">
-        <Button type="submit" variant="primary" busy={props.busy} busyLabel="Sending">
-          Import
+        <Button type="submit" variant="primary" busy={props.busy} busyLabel="正在发送">
+          导入
         </Button>
         <CancelButton onCancel={props.onCancel} />
       </div>
@@ -194,9 +194,9 @@ function SelectStage(
   };
   return (
     <form className="stage" onSubmit={submit}>
-      <Lead>Choose which account to connect.</Lead>
+      <Lead>请选择要连接的账户。</Lead>
       <fieldset className="choices">
-        <legend className="sr">Account</legend>
+        <legend className="sr">账户</legend>
         {step.options.map((option) => (
           <label key={option.id} className="choice">
             <input
@@ -216,9 +216,9 @@ function SelectStage(
           variant="primary"
           disabled={selected === ""}
           busy={props.busy}
-          busyLabel="Sending"
+          busyLabel="正在发送"
         >
-          Continue
+          继续
         </Button>
         <CancelButton onCancel={props.onCancel} />
       </div>
@@ -232,7 +232,7 @@ export function SignInStage(props: StageProps) {
   if (step === null) {
     return (
       <div className="stage">
-        <Lead>Starting the {provider} sign-in. This page updates on its own.</Lead>
+        <Lead>正在启动 {provider} 登录。此页面会自动更新。</Lead>
         <div className="row">
           <CancelButton onCancel={props.onCancel} />
         </div>
@@ -244,20 +244,15 @@ export function SignInStage(props: StageProps) {
       return (
         <div className="stage">
           {method === "approval_poll" ? (
-            <Lead>
-              Open the {provider} approval page and approve Headroom there. This page updates on its
-              own.
-            </Lead>
+            <Lead>打开 {provider} 的批准页面并在那里批准 Headroom。此页面会自动更新。</Lead>
           ) : (
-            <Lead>
-              Open the {provider} sign-in page and finish there. This page updates on its own.
-            </Lead>
+            <Lead>打开 {provider} 登录页并在那里完成登录。此页面会自动更新。</Lead>
           )}
           <div className="row">
             <OpenLink url={step.url}>
-              {method === "approval_poll" ? "Open the Approval Page" : `Open ${provider} Sign-In`}
+              {method === "approval_poll" ? "打开批准页面" : `打开 ${provider} 登录页`}
             </OpenLink>
-            <CopyButton value={step.url} label="Copy Link" />
+            <CopyButton value={step.url} label="复制链接" />
             <CancelButton onCancel={props.onCancel} />
           </div>
         </div>
@@ -266,15 +261,14 @@ export function SignInStage(props: StageProps) {
       return (
         <div className="stage">
           <Lead>
-            Open {provider} and enter this code. Headroom finishes on its own once {provider}{" "}
-            approves.
+            打开 {provider} 并输入此代码。{provider} 批准后，Headroom 会自动完成。
           </Lead>
           <div className="row">
             <span className="code">
               {step.userCode}
-              <CopyButton value={step.userCode} label="Copy Code" size="sm" iconOnly />
+              <CopyButton value={step.userCode} label="复制代码" size="sm" iconOnly />
             </span>
-            <OpenLink url={step.verificationUrl}>{`Open ${provider} Sign-In`}</OpenLink>
+            <OpenLink url={step.verificationUrl}>{`打开 ${provider} 登录页`}</OpenLink>
             <CancelButton onCancel={props.onCancel} />
           </div>
         </div>
@@ -294,7 +288,7 @@ export function SignInStage(props: StageProps) {
 export function CheckStage(props: { readonly onCancel: () => void }) {
   return (
     <div className="stage">
-      <Lead>Signed in. Checking this account's limits.</Lead>
+      <Lead>已登录。正在检查此账户的额度。</Lead>
       <div className="sk bar" style={{ width: "40%" }} />
       <div className="row">
         <CancelButton onCancel={props.onCancel} />

@@ -1,9 +1,10 @@
 import type { OverviewConnection } from "../../api.ts";
-import { earlyResetLine, earlyResetTitle } from "@headroom/view-model/early-resets";
-import { accountName, providerName } from "@headroom/view-model/labels";
+import type { EarlyReset } from "@headroom/view-model/early-resets";
+import { providerName } from "@headroom/view-model/labels";
 import { resetVerb } from "../../lib/reset-caption.tsx";
-import { age, countdown, exactFull, type Clock } from "@headroom/view-model/time";
+import type { Clock } from "@headroom/view-model/time";
 import { displayMeter, toneOf, type LimitsView } from "@headroom/view-model/tone";
+import { zhAccountName, zhAgo, zhCountdown, zhExactFull, zhLabel, zhShort } from "../../lib/zh.ts";
 import type { PopoverContent } from "../../ui/hover-popover.tsx";
 import { timelineKinds, type Bank, type EarlyMark, type Lane } from "./lanes.ts";
 
@@ -30,16 +31,16 @@ export function earlyTipId(lane: Lane, mark: EarlyMark): string {
   return `${lane.id}:early:${mark.index}`;
 }
 
-/** "91% Used" or "36% Left"; "Not reported" when the provider gave no figure. */
+/** "已用 91%" or "剩余 36%"; "未报告" when the provider gave no figure. */
 export function usedText(used: number | null, context: TipContext): string {
-  if (used === null) return "Not reported";
+  if (used === null) return "未报告";
   const shown = displayMeter(used, context.view, context.low, 0);
-  return `${shown.value ?? 0}% ${context.view === "left" ? "Left" : "Used"}`;
+  return `${context.view === "left" ? "剩余" : "已用"} ${shown.value ?? 0}%`;
 }
 
-/** "Claude · Personal". */
+/** "Claude · Personal", with the account's default name in Chinese. */
 export function laneName(connection: OverviewConnection): string {
-  return `${providerName(connection.provider)} · ${accountName(connection)}`;
+  return `${providerName(connection.provider)} · ${zhAccountName(connection)}`;
 }
 
 /** The account's identity when another account of its provider has the same name, else null. */
@@ -57,7 +58,7 @@ export function kindLabel(kind: Lane["kind"]): string {
 const staleLines = (lane: Lane, context: TipContext): { text: string }[] => {
   const observed = lane.connection.snapshot?.observedAt;
   return lane.inactive && observed !== undefined
-    ? [{ text: `Numbers from ${age(observed, context.now)}` }]
+    ? [{ text: `数据来自${zhAgo(observed, context.now)}` }]
     : [];
 };
 
@@ -70,11 +71,8 @@ export function windowTip(lane: Lane, role: Role, context: TipContext): PopoverC
     const start = lane.start - lane.lengthMs;
     return {
       title,
-      when: `Earlier window · ended ${exactFull(lane.start, now, clock)}`,
-      lines: [
-        { text: `Opened ${exactFull(start, now, clock)}` },
-        { text: "Worked out from the window length" },
-      ],
+      when: `较早的窗口 · 结束于${zhExactFull(lane.start, now, clock)}`,
+      lines: [{ text: `开启于${zhExactFull(start, now, clock)}` }, { text: "根据窗口长度推算" }],
     };
   }
   if (role === "next") {
@@ -82,35 +80,33 @@ export function windowTip(lane: Lane, role: Role, context: TipContext): PopoverC
     return {
       title,
       when: idleNext
-        ? "Next window · starts on next use"
-        : `Next window · opens ${exactFull(lane.end, now, clock)}`,
+        ? "下一个窗口 · 下次使用时开始"
+        : `下一个窗口 · 开启于${zhExactFull(lane.end, now, clock)}`,
       lines: [
-        ...(idleNext
-          ? []
-          : [{ text: `Resets ${exactFull(lane.end + lane.lengthMs, now, clock)}` }]),
-        { text: "Opens when this one resets" },
+        ...(idleNext ? [] : [{ text: `${zhExactFull(lane.end + lane.lengthMs, now, clock)}重置` }]),
+        { text: "当前窗口重置时开启" },
       ],
     };
   }
   if (lane.phase === "idle") {
     return {
       title,
-      when: "Not Started",
-      lines: [{ text: "Opens when you next use it" }, ...stale],
+      when: "未开始",
+      lines: [{ text: "下次使用时开启" }, ...stale],
     };
   }
   const meters = lane.meters.map((meter) => ({
-    text: `${usedText(meter.used, context)} · ${meter.short}`,
+    text: `${usedText(meter.used, context)} · ${zhShort(meter.short)}`,
     tone: meter.used === null ? null : toneOf(meter.used, context.low),
   }));
   if (lane.phase === "ended") {
     return {
       title,
-      when: `Ended ${exactFull(lane.end, now, clock)}`,
+      when: `结束于${zhExactFull(lane.end, now, clock)}`,
       lines: [
         ...meters,
-        { text: `Opened ${exactFull(lane.start, now, clock)}` },
-        { text: "Last reading, from before it ended" },
+        { text: `开启于${zhExactFull(lane.start, now, clock)}` },
+        { text: "最后一次读数，来自窗口结束之前" },
         ...stale,
       ],
     };
@@ -121,11 +117,11 @@ export function windowTip(lane: Lane, role: Role, context: TipContext): PopoverC
   const verb = resetVerb(lane.drawn.resetWords);
   return {
     title,
-    when: `${verb} in ${countdown(lane.end, now)} · ${exactFull(lane.end, now, clock)}`,
+    when: `${zhCountdown(lane.end, now)}后${verb} · ${zhExactFull(lane.end, now, clock)}`,
     lines: [
       ...meters,
-      { text: `Opened ${exactFull(lane.start, now, clock)}` },
-      { text: `${passed}% of the window has passed` },
+      { text: `开启于${zhExactFull(lane.start, now, clock)}` },
+      { text: `窗口时间已过 ${passed}%` },
       ...stale,
     ],
   };
@@ -133,18 +129,25 @@ export function windowTip(lane: Lane, role: Role, context: TipContext): PopoverC
 
 function bankTip(lane: Lane, bank: Bank, context: TipContext): PopoverContent {
   return {
-    title: `${laneName(lane.connection)} · ${bank.label} Expires`,
-    when: `Expires in ${countdown(bank.at, context.now)} · ${exactFull(bank.at, context.now, context.clock)}`,
-    lines: [{ text: `${bank.index + 1} of ${bank.count} banked` }],
+    title: `${laneName(lane.connection)} · ${zhLabel(bank.label)}到期`,
+    when: `${zhCountdown(bank.at, context.now)}后到期 · ${zhExactFull(bank.at, context.now, context.clock)}`,
+    lines: [{ text: `已存 ${bank.count} 个中的第 ${bank.index + 1} 个` }],
   };
+}
+
+/** The figures of an early reset in the owner's used or left view: "已用 41% → 1% · 提前2天5小时". */
+function earlyLine(reset: EarlyReset, view: LimitsView): string {
+  const shown = (used: number): string =>
+    `${Math.round(view === "left" ? Math.max(0, 100 - used) : used)}%`;
+  return `${view === "left" ? "剩余" : "已用"} ${shown(reset.from)} → ${shown(reset.to)} · 提前${zhCountdown(reset.expectedAt, reset.at)}`;
 }
 
 function earlyTip(lane: Lane, mark: EarlyMark, context: TipContext): PopoverContent {
   const { reset } = mark;
   return {
-    title: `${laneName(lane.connection)} · ${earlyResetTitle(reset)}`,
-    when: `${mark.short} · ${exactFull(reset.at, context.now, context.clock)}`,
-    lines: [{ text: earlyResetLine(reset, context.view) }],
+    title: `${laneName(lane.connection)} · ${reset.bankedUsed ? "已存重置已使用" : "提前重置"}`,
+    when: `${zhShort(mark.short)} · ${zhExactFull(reset.at, context.now, context.clock)}`,
+    lines: [{ text: earlyLine(reset, context.view) }],
   };
 }
 
@@ -152,7 +155,7 @@ function earlyTip(lane: Lane, mark: EarlyMark, context: TipContext): PopoverCont
 export function tipLabel(tip: PopoverContent): string {
   return [tip.title, tip.when, ...tip.lines.map((line) => line.text)]
     .filter((part): part is string => part !== undefined)
-    .join(". ");
+    .join("。");
 }
 
 /** Every popover of a set of lanes, by id. */

@@ -2,16 +2,13 @@ import type { CSSProperties } from "react";
 
 import { BrandMark } from "../../icons.tsx";
 import { meterWindows } from "@headroom/view-model/accounts";
-import { accountName, planLabel, providerName, statusOf } from "@headroom/view-model/labels";
+import { planLabel, providerName, statusOf } from "@headroom/view-model/labels";
 import { displayMeter } from "@headroom/view-model/tone";
+import { zhAccountName, zhLabel } from "../../lib/zh.ts";
 import { cx } from "../../ui/cx.ts";
 import { StatusPill, statusKindOf } from "../../ui/pill.tsx";
 import { limitName, type Lane, type LaneGroup } from "./lanes.ts";
 import type { TipContext } from "./tips.ts";
-
-function plural(count: number, word: string): string {
-  return `${count} ${word}${count === 1 ? "" : "s"}`;
-}
 
 /** A style with one custom property: the row's place in the order, for the staggered entrance. */
 export function rowStyle(index: number): CSSProperties {
@@ -30,7 +27,7 @@ export function WhoCell(props: { readonly lane: Lane; readonly context: TipConte
     <div className="tl-who-cell">
       <div className="tl-id">
         <span className="tl-nm">
-          {accountName(connection)}
+          {zhAccountName(connection)}
           {plan === null ? null : <span className="tl-plan">{` · ${plan}`}</span>}
         </span>
         {status.word === "Active" ? null : <StatusPill kind={statusKindOf(status.word)} />}
@@ -48,10 +45,8 @@ export function WhoCell(props: { readonly lane: Lane; readonly context: TipConte
             return (
               <span key={meter.key} className={cx("tl-chip", meter.kind === lane.kind && "tl-on")}>
                 {tone === null ? null : <i className="tl-dot" data-tone={tone} />}
-                {limitName(meter)}{" "}
-                <b>
-                  {shown !== null ? `${shown.value ?? 0}%` : meter.notStarted ? "Not Started" : "—"}
-                </b>
+                {zhLabel(limitName(meter))}{" "}
+                <b>{shown !== null ? `${shown.value ?? 0}%` : meter.notStarted ? "未开始" : "—"}</b>
               </span>
             );
           })}
@@ -66,7 +61,7 @@ export function GroupHeader(props: { readonly group: LaneGroup }) {
     <div className="tl-grp">
       <BrandMark provider={group.provider} />
       <b>{providerName(group.provider)}</b>
-      <span>{plural(group.lanes.length, "Account")}</span>
+      <span>{`${group.lanes.length} 个账户`}</span>
     </div>
   );
 }

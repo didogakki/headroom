@@ -4,12 +4,11 @@ const botTokenShape = /^\d{5,}:[A-Za-z0-9_-]{30,}$/;
 const chatIdShape = /^-?\d{1,20}$|^@[A-Za-z0-9_]{5,32}$/;
 const maxUrlLength = 2048;
 
-export const botTokenProblem = "That does not look like a bot token. It looks like 123456789:AAH…";
-export const chatIdProblem = "Use a number like 123456789, or @channelname.";
-export const urlProblem = "Enter a full URL, starting with https://.";
-export const urlCredentialsProblem = "Remove the user name and password from the URL.";
-export const insecureWarning =
-  "This address is not encrypted. Use https:// unless it is on your own network.";
+export const botTokenProblem = "这看起来不像机器人令牌。令牌的格式类似 123456789:AAH…";
+export const chatIdProblem = "请使用类似 123456789 的数字，或 @channelname。";
+export const urlProblem = "请输入完整的 URL，以 https:// 开头。";
+export const urlCredentialsProblem = "请从 URL 中移除用户名和密码。";
+export const insecureWarning = "此地址未加密。除非它在你自己的网络内，否则请使用 https://。";
 
 /** True when `text` has the shape of a Telegram bot token. */
 export function isBotToken(text: string): boolean {

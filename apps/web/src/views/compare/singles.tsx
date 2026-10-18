@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { BrandMark } from "../../icons.tsx";
 import { awaitingFirstRefresh, providerName, statusOf } from "@headroom/view-model/labels";
 import { formatNumber } from "@headroom/view-model/present";
+import { zhAccountName, zhCaption, zhLabel, zhWindow } from "../../lib/zh.ts";
 import { Bar } from "../../ui/bar.tsx";
 import { cx } from "../../ui/cx.ts";
 import { StatusPill, statusKindOf } from "../../ui/pill.tsx";
@@ -24,7 +25,7 @@ function Line(props: {
           <b>{figure.text}</b>
           <span className="window">{name}</span>
           {figure.caption === null ? null : (
-            <span className={cx("tone", figure.tone)}>{figure.caption}</span>
+            <span className={cx("tone", figure.tone)}>{zhCaption(figure.caption)}</span>
           )}
         </div>
         <Bar
@@ -32,14 +33,14 @@ function Line(props: {
           percent={figure.fill}
           tone={figure.tone}
           valueNow={figure.used}
-          label={`${name} ${figure.used}% used`}
+          label={`${name} 已用 ${figure.used}%`}
         />
         <div className="cap">{props.caption}</div>
       </div>
     );
   }
   const words =
-    figure.kind === "not_started" ? "Not Started" : figure.kind === "unlimited" ? "Unlimited" : "—";
+    figure.kind === "not_started" ? "未开始" : figure.kind === "unlimited" ? "无限制" : "—";
   return (
     <div className="line-row">
       <div className="top-line">
@@ -70,7 +71,7 @@ export function SingleCard(props: { readonly row: Row; readonly look: Look }) {
         <span className="titles">
           <span className="pname">{providerName(provider)}</span>
           <span className="sub">
-            {row.name}
+            {zhAccountName(connection)}
             {row.plan === null ? null : ` · ${row.plan}`}
           </span>
         </span>
@@ -81,7 +82,11 @@ export function SingleCard(props: { readonly row: Row; readonly look: Look }) {
           <Line
             key={window.key}
             figure={figureOfWindow(window, provider, look)}
-            name={window.window === null ? window.label : `${window.label} · ${window.window}`}
+            name={
+              window.window === null
+                ? zhLabel(window.label)
+                : `${zhLabel(window.label)} · ${zhWindow(window.window)}`
+            }
             caption={<ResetLine window={window} />}
           />
         ))}
@@ -92,16 +97,16 @@ export function SingleCard(props: { readonly row: Row; readonly look: Look }) {
                 ? { kind: "unknown" }
                 : figureOfRoom(row.room.left, provider, look)
             }
-            name="Credit Balance"
+            name="积分余额"
             caption={
               row.balance.total === null
-                ? `${formatNumber(row.balance.value, row.balance.decimals)} credits left`
-                : `${formatNumber(row.balance.value, row.balance.decimals)} of ${formatNumber(row.balance.total, row.balance.decimals)} left`
+                ? `剩余 ${formatNumber(row.balance.value, row.balance.decimals)} 积分`
+                : `剩余 ${formatNumber(row.balance.value, row.balance.decimals)}，共 ${formatNumber(row.balance.total, row.balance.decimals)}`
             }
           />
         )}
         {row.windows.length === 0 && row.balance === null ? (
-          <p className="none">Nothing reported yet.</p>
+          <p className="none">暂无报告。</p>
         ) : null}
       </div>
     </article>
