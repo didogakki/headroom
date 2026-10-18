@@ -119,6 +119,10 @@ function baseLabel(story: AccountStory): string {
 const countOf = (list: readonly string[], value: string): number =>
   list.filter((entry) => entry === value).length;
 
+/** An email's local part keeps its case; the owner's own name and the scope word are lowercased, as before. */
+const nameInLabel = (story: AccountStory): string =>
+  story.displayName === story.name ? story.name.toLowerCase() : story.displayName;
+
 /** Page-unique labels: the plan when it tells accounts apart, then the account name, then a number. */
 function labelsOf(stories: readonly AccountStory[]): Map<string, string> {
   const base = baseLabel;
@@ -126,15 +130,49 @@ function labelsOf(stories: readonly AccountStory[]): Map<string, string> {
   const plain = stories.map(base);
   const named = stories.map((story, index) => {
     const label = plain[index] ?? base(story);
-    return count(plain, label) > 1 ? `${label} (${story.name.toLowerCase()})` : label;
+    return count(plain, label) > 1 ? `${label} (${nameInLabel(story)})` : label;
   });
   const labels = new Map<string, string>();
+  const taken = new Set<string>();
+  const candidates = stories.map((story, index) => named[index] ?? base(story));
+  // Every natural label is reserved up front, so a repeat's number never steals a later account's own "x 2".
+  const reserved = new Set(candidates.map((label) => label.toLowerCase()));
   stories.forEach((story, index) => {
-    const label = named[index] ?? base(story);
-    const before = named.slice(0, index).filter((entry) => entry === label).length;
-    labels.set(story.id, before === 0 ? label : label.replace(/\)$/, ` ${before + 1})`));
+    const label = candidates[index] ?? base(story);
+    let number = 1;
+    let unique = label;
+    while (taken.has(unique.toLowerCase())) {
+      number += 1;
+      unique = label.endsWith(")") ? `${label.slice(0, -1)} ${number})` : `${label} ${number}`;
+      while (reserved.has(unique.toLowerCase()) && !taken.has(unique.toLowerCase())) {
+        number += 1;
+        unique = label.endsWith(")") ? `${label.slice(0, -1)} ${number})` : `${label} ${number}`;
+      }
+    }
+    taken.add(unique.toLowerCase());
+    labels.set(story.id, unique);
   });
   return labels;
+}
+
+const cut = (text: string, room: number): string =>
+  text.length <= room ? text : `${text.slice(0, Math.max(1, room - 1))}…`;
+
+/**
+ * A short row label for a narrow chart: the account name first, then the plan word, as "alice·Plus". When it does
+ * not fit, the plan word goes and the name is cut, but a repeat number is kept so twin accounts stay apart.
+ */
+export function compactLabel(label: string, max = 13): string {
+  const match = /^(.+) \((.+)\)$/.exec(label);
+  if (match === null) return cut(label, max);
+  const tag = (match[1] ?? "").split(" ").at(-1) ?? "";
+  const inner = match[2] ?? "";
+  const numbered = /^(.+) (\d+)$/.exec(inner);
+  const name = numbered?.[1] ?? inner;
+  const suffix = numbered === null ? "" : ` ${numbered[2]}`;
+  const withTag = `${name}${suffix}·${tag}`;
+  if (withTag.length <= max) return withTag;
+  return `${cut(name, max - suffix.length)}${suffix}`;
 }
 
 function curvesOf(story: AccountStory, now: number): Curve[] {

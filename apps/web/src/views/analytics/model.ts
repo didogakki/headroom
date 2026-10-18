@@ -71,6 +71,11 @@ export interface AccountStory {
   readonly providerName: string;
   /** "Personal", "Work". */
   readonly name: string;
+  /**
+   * What the Analytics page calls the account: the owner's own name, else the part of its email before the "@",
+   * else `name`. Display only; `name` stays the scope word that the plan-fit logic reads.
+   */
+  readonly displayName: string;
   /** "Max", "Pro", or null when the provider reports none. */
   readonly plan: string | null;
   readonly inactive: boolean;
@@ -319,6 +324,22 @@ function primaryOf(
   return chosen === undefined ? null : story(chosen, now, rangeDays, entry);
 }
 
+/** The part of an email before its "@", or null when `identity` is not a plain email (a handle never counts). */
+function emailLocalPart(identity: string | null): string | null {
+  const text = identity?.trim() ?? "";
+  const parts = text.split("@");
+  const [local, domain] = parts;
+  // oxlint-disable-next-line no-control-regex -- control characters are exactly what an email must not hold
+  if (parts.length !== 2 || !local || !domain || /[\s\u0000-\u001f\u007f]/u.test(text)) return null;
+  return local;
+}
+
+/** The owner's own name wins; then an email's local part; then the scope word. The domain is never shown. */
+function displayNameOf(connection: OverviewConnection): string {
+  const custom = connection.name?.trim();
+  return custom ? custom : (emailLocalPart(connection.identity) ?? accountName(connection));
+}
+
 /**
  * Build the Analytics model from the overview's connections and the stored history. `monthlyCosts` maps a
  * connection id to its monthly cost in US dollars; a missing or null entry means the price is not known.
@@ -344,6 +365,7 @@ export function buildAnalytics(
       provider: connection.provider,
       providerName: providerName(connection.provider),
       name: accountName(connection),
+      displayName: displayNameOf(connection),
       plan: planLabel(connection.plan),
       inactive: isInactive(connection),
       stale: connection.stale,

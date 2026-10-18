@@ -14,14 +14,14 @@ import {
   hour,
   useCardSwitch,
   useHeadline,
-  useTipLayer,
   useStoredView,
+  useTipLayer,
   useWidth,
   weekdays,
   type Line,
 } from "./common.tsx";
 import { shortDate } from "./format.ts";
-import { hourOfWeek, slotCount, type AccountSeries, type Series } from "./series.ts";
+import { compactLabel, hourOfWeek, slotCount, type AccountSeries, type Series } from "./series.ts";
 import "./rhythm.css";
 
 /**
@@ -1117,9 +1117,6 @@ function Weeks(props: { readonly series: Series }) {
 
 /* ------------------------------------------------------------------ Range */
 
-/** A label cut to `max` characters, for a narrow column. */
-const shorten = (text: string, max: number): string =>
-  text.length > max ? `${text.slice(0, max - 1)}…` : text;
 const typicalKey = (i: number): string => `t${weekdays[Math.floor(i / 24)] ?? ""}${i % 24}`;
 const rangeDays = slotCount / 24;
 const fixed = (value: number | null): string => (value === null ? "无" : value.toFixed(1));
@@ -1810,7 +1807,8 @@ function ByAccount(props: { readonly series: Series }) {
                 <g key={row.account.id}>
                   <Mark account={row.account} x={0} y={y + ch / 2 - 7} />
                   <text className="rh-t rh-t2" x={20} y={y + ch / 2 + 4}>
-                    {narrow ? shorten(row.account.label, 12) : row.account.label}
+                    <title>{row.account.label}</title>
+                    {narrow ? compactLabel(row.account.label) : row.account.label}
                   </text>
                   <text
                     className="rh-t rh-t2"

@@ -462,7 +462,7 @@ function AccountHead(props: { readonly forecast: Forecast }) {
   const plan = story.plan === null ? story.providerName : `${story.providerName} ${story.plan}`;
   return (
     <div className="now-head">
-      <AccountLabel account={account} strong sub={`${plan} · ${story.name}`} />
+      <AccountLabel account={account} strong sub={`${plan} · ${story.displayName}`} />
       <p className="now-sub">
         {`已用${Math.round(props.forecast.used)}%，窗口已过${Math.round(props.forecast.elapsed * 100)}%`}
       </p>

@@ -4,7 +4,7 @@ import type { History } from "@headroom/view-model/history";
 import { connection, percent } from "@headroom/view-model/test-fixtures";
 
 import { buildAnalytics } from "./model.ts";
-import { buildSeries } from "./series.ts";
+import { buildSeries, compactLabel } from "./series.ts";
 
 const hour = 3_600_000;
 const day = 24 * hour;
@@ -296,5 +296,116 @@ describe("hourly slots and working hours", () => {
     expect(series.working.slice(5 * 24).some(Boolean)).toBe(false);
     expect(series.working[3]).toBe(false);
     expect(series.working[10]).toBe(true);
+  });
+});
+
+describe("account names on the Analytics page", () => {
+  const now = Date.UTC(2026, 9, 20, 12);
+  const empty: History = { from: 0, to: 0, bucketMs: hour, retentionDays: 90, connections: [] };
+
+  /** A synthetic Codex account with one weekly meter, so it reaches the Analytics page. */
+  function codex(id: string, over: Parameters<typeof connection>[1] = {}) {
+    const metric = percent("weekly", 10, { scope: "window:604800s", resetsAt: now + 3 * day });
+    return connection("codex", { id, plan: "plus", metrics: [metric], ...over });
+  }
+
+  const analyze = (accounts: ReturnType<typeof codex>[]) =>
+    buildAnalytics(accounts, empty, now, 90, new Map());
+  const labels = (accounts: ReturnType<typeof codex>[]) =>
+    buildSeries(analyze(accounts), now).accounts.map((entry) => entry.label);
+
+  test("accounts are told apart by the part of their email before the @", () => {
+    const accounts = [
+      codex("a", { identity: "alice@one.test" }),
+      codex("b", { identity: "bob+work@two.test" }),
+    ];
+    expect(analyze(accounts).accounts.map((entry) => entry.displayName)).toEqual([
+      "alice",
+      "bob+work",
+    ]);
+    expect(labels(accounts)).toEqual(["Codex Plus (alice)", "Codex Plus (bob+work)"]);
+  });
+
+  test("the scope word stays in name, so plan-fit logic is unchanged", () => {
+    const [story] = analyze([codex("a", { identity: "alice@one.test" })]).accounts;
+    expect(story?.name).toBe("Personal");
+    expect(story?.displayName).toBe("alice");
+  });
+
+  test("the owner's own name wins over the email, even when it reads Personal or Work", () => {
+    const names = analyze([
+      codex("a", { name: "  Personal  ", identity: "alice@one.test" }),
+      codex("b", { name: "Work", identity: "bob@two.test" }),
+      codex("c", { name: "Side project", identity: "carol@three.test" }),
+    ]).accounts.map((entry) => entry.displayName);
+    expect(names).toEqual(["Personal", "Work", "Side project"]);
+  });
+
+  test("a missing or invalid email falls back to the scope word and never shows a domain", () => {
+    const identities = [
+      null,
+      "",
+      "octocat",
+      "@one.test",
+      "alice@",
+      "a@b@one.test",
+      "al ice@one.test",
+      "alice@one .test",
+      "alice\u0007@one.test",
+    ];
+    for (const identity of identities) {
+      const [story] = analyze([codex("a", { identity })]).accounts;
+      expect(story?.displayName).toBe("Personal");
+    }
+  });
+
+  test("the same local part on different domains, or in different case, still gets unique labels", () => {
+    const result = labels([
+      codex("a", { identity: "alice@one.test" }),
+      codex("b", { identity: "alice@two.test" }),
+      codex("c", { identity: "Alice@three.test" }),
+    ]);
+    expect(result).toEqual(["Codex Plus (alice)", "Codex Plus (alice 2)", "Codex Plus (Alice 3)"]);
+    expect(new Set(result.map((label) => label.toLowerCase())).size).toBe(3);
+  });
+
+  test("a natural numbered name does not collide with a repeat number", () => {
+    const result = labels([
+      codex("a", { name: "x" }),
+      codex("b", { name: "x" }),
+      codex("c", { name: "x 2" }),
+    ]);
+    expect(result).toEqual(["Codex Plus (x)", "Codex Plus (x 3)", "Codex Plus (x 2)"]);
+  });
+
+  test("a natural numbered name keeps its label even when it differs only in case", () => {
+    const result = labels([
+      codex("a", { name: "x" }),
+      codex("b", { name: "X" }),
+      codex("c", { name: "x 2" }),
+    ]);
+    expect(result).toEqual(["Codex Plus (x)", "Codex Plus (x 3)", "Codex Plus (x 2)"]);
+  });
+
+  test("narrow labels keep accounts apart, including twins and long names", () => {
+    expect(compactLabel("Codex Plus (alice)")).toBe("alice·Plus");
+    expect(compactLabel("Codex Plus (bob)")).toBe("bob·Plus");
+    expect(compactLabel("Codex Plus (x 2)")).toBe("x 2·Plus");
+    expect(compactLabel("Codex Plus")).toBe("Codex Plus");
+    const long = [
+      compactLabel("Codex Plus (averyverylongname)"),
+      compactLabel("Codex Plus (averyverylongname 2)"),
+    ];
+    expect(long).toEqual(["averyverylon…", "averyveryl… 2"]);
+    expect(long.every((label) => label.length <= 13)).toBe(true);
+    expect(new Set(long).size).toBe(2);
+  });
+
+  test("different plans keep their plain label with no account name", () => {
+    const result = labels([
+      codex("a", { identity: "alice@one.test" }),
+      codex("b", { identity: "bob@two.test", plan: "pro" }),
+    ]);
+    expect(result).toEqual(["Codex Plus", "Codex Pro"]);
   });
 });
