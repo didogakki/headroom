@@ -249,8 +249,8 @@ function calendarOf(series: Series) {
 /* ------------------------------------------------------- hover and readout */
 
 /** The headline that swaps on hover plus the one tooltip, which follows the pointer. */
-function useReadout(base: Line) {
-  const headline = useHeadline(base);
+function useReadout(base: Line, stable = false) {
+  const headline = useHeadline(base, stable);
   const tip = useTipLayer();
   const place = useCallback(
     (event: PointerEvent, big: string, cap: string) =>
@@ -1721,7 +1721,7 @@ function ByAccount(props: { readonly series: Series }) {
   const baseCap =
     peakHours.length > 0 ? `多数账户在 ${spanText(peakHours)} 达到峰值` : "没有明显的共同高峰";
   const base: Line = { big: first, cap: baseCap };
-  const readout = useReadout(base);
+  const readout = useReadout(base, true);
   const { bind } = readout;
 
   const avgMax = Math.max(0.0001, ...avg);

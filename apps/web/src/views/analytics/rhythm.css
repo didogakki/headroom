@@ -16,6 +16,35 @@
   flex: 1 1 280px;
 }
 
+/* Stable headline (By Account): the opening words set the height; the detail is drawn over them and clipped to that box. */
+.an2-ro-stable {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+}
+.an2-ro-base {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.an2-ro-base[data-covered] {
+  visibility: hidden;
+}
+.an2-ro-live {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.an2-ro-live .an2-ro-big {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* The chart's own box: the tooltip is placed in its coordinates, and a wide chart scrolls inside it. */
 .rh-box {
   position: relative;

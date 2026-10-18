@@ -90,13 +90,25 @@ function useSlotValue<T>(slot: Slot<T>): T {
   return useSyncExternalStore(slot.subscribe, slot.get, slot.get);
 }
 
-function LiveHeadline(props: { readonly slot: Slot<Line | null>; readonly base: Line }) {
+function LiveHeadline(props: {
+  readonly slot: Slot<Line | null>;
+  readonly base: Line;
+  readonly stable: boolean;
+}) {
   const lit = useSlotValue(props.slot);
+  if (props.stable) return <StableHeadline lit={lit} base={props.base} />;
   return <Headline line={lit ?? props.base} />;
 }
 
-/** The headline a card opens with, and the detail that replaces it while the pointer rests on a mark. */
-export function useHeadline(base: Line): {
+/**
+ * The headline a card opens with, and the detail that replaces it while the pointer rests on a mark. With
+ * `stable`, the detail is drawn over the opening headline's own space and clipped to it, so a chart below never
+ * moves when the words change.
+ */
+export function useHeadline(
+  base: Line,
+  stable = false,
+): {
   readonly node: ReactNode;
   readonly show: (line: Line) => void;
   readonly clear: () => void;
@@ -105,7 +117,10 @@ export function useHeadline(base: Line): {
   const show = useCallback((line: Line) => slot.set(line), [slot]);
   const clear = useCallback(() => slot.set(null), [slot]);
   const { big, cap } = base;
-  const node = useMemo(() => <LiveHeadline slot={slot} base={{ big, cap }} />, [slot, big, cap]);
+  const node = useMemo(
+    () => <LiveHeadline slot={slot} base={{ big, cap }} stable={stable} />,
+    [slot, big, cap, stable],
+  );
   return useMemo(() => ({ node, show, clear }), [node, show, clear]);
 }
 
@@ -147,6 +162,28 @@ function Headline(props: { readonly line: Line }) {
     <div className="an2-ro" aria-live="polite">
       <p className="an2-ro-big">{props.line.big}</p>
       <p className="an2-ro-cap">{props.line.cap}</p>
+    </div>
+  );
+}
+
+/**
+ * A headline whose height is always the opening headline's. The opening words stay in the flow and are hidden
+ * (also from screen readers) while the detail sits over them, so the detail is announced once and cannot resize
+ * the row.
+ */
+function StableHeadline(props: { readonly lit: Line | null; readonly base: Line }) {
+  return (
+    <div className="an2-ro an2-ro-stable" aria-live="polite">
+      <div className="an2-ro-base" data-covered={props.lit !== null || undefined}>
+        <p className="an2-ro-big">{props.base.big}</p>
+        <p className="an2-ro-cap">{props.base.cap}</p>
+      </div>
+      {props.lit === null ? null : (
+        <div className="an2-ro-live">
+          <p className="an2-ro-big">{props.lit.big}</p>
+          <p className="an2-ro-cap">{props.lit.cap}</p>
+        </div>
+      )}
     </div>
   );
 }
