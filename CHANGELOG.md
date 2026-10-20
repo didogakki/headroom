@@ -1,5 +1,42 @@
 # Changelog
 
+## [0.1.13](https://github.com/amitray007/headroom/compare/v0.1.12...v0.1.13) (2026-10-19)
+
+
+### Features
+
+* show when a Cursor subscription renews ([00090c1](https://github.com/amitray007/headroom/commit/00090c13d3454f1ae365c3756fadf74e250a01b1))
+
+
+### Bug Fixes
+
+* show each Cursor pool's reset and the subscription renewal date ([8bde4dd](https://github.com/amitray007/headroom/commit/8bde4dd6064084dfbd21b425fce6503f1b9f237a))
+* show when each Cursor pool resets instead of "Resets with the cycle" ([433931e](https://github.com/amitray007/headroom/commit/433931e6508ff54957caced850d4c55c1686d2c7))
+
+## [0.1.12](https://github.com/amitray007/headroom/compare/v0.1.11...v0.1.12) (2026-10-19)
+
+
+### Bug Fixes
+
+* keep the account row reset caption on one line ([13f959c](https://github.com/amitray007/headroom/commit/13f959ce12b2634324edfcc6e16ad852e2415411))
+* keep the account row reset caption on one line ([db7a5cf](https://github.com/amitray007/headroom/commit/db7a5cf2efdc57951071a000c23feef46e91b161))
+* read Cursor's weekly merged plans and guard against misleading figures ([0d8d962](https://github.com/amitray007/headroom/commit/0d8d9624afbd43bdc947dfccb87c424f43a01dc8))
+* read Cursor's weekly merged plans and guard against misleading figures ([54d67c6](https://github.com/amitray007/headroom/commit/54d67c66c195d8b212c00396d3f1a20ce73dc2cd))
+
+## [0.1.11](https://github.com/amitray007/headroom/compare/v0.1.10...v0.1.11) (2026-10-19)
+
+
+### Features
+
+* show a Cursor team seat's shared pool as its own meter ([4e6a47b](https://github.com/amitray007/headroom/commit/4e6a47bd636a6212408d696f77352e576b1abfe0))
+
+
+### Bug Fixes
+
+* keep RPC figures over the Cursor usage summary and align the pool headline ([84615ed](https://github.com/amitray007/headroom/commit/84615edb81fa8cca98510522d7846f454893f194))
+* read Cursor enterprise and team-pool usage from usage-summary ([3eb09a4](https://github.com/amitray007/headroom/commit/3eb09a4a836af5a0330209a9e5fc98db805123cb))
+* read Cursor plan usage from usage-summary for enterprise seats ([0d35a77](https://github.com/amitray007/headroom/commit/0d35a77cca79591d1ed506b3488d9760684b158b))
+
 ## [0.1.10](https://github.com/amitray007/headroom/compare/v0.1.9...v0.1.10) (2026-10-18)
 
 

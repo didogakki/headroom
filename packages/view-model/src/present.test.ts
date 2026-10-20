@@ -400,9 +400,11 @@ describe("cursor", () => {
       ["API Pool", "billing cycle", 6.48],
     ]);
   });
-  test("captions: the cycle end on Included, no time on the pools", () => {
+  test("captions: every included pool counts down to the cycle end", () => {
     const words = panel.cells.flatMap((cell) => (cell.kind === "meter" ? [cell.resetWords] : []));
-    expect(words).toEqual(["cycle_end", "with_cycle", "with_cycle"]);
+    expect(words).toEqual(["cycle_end", "cycle_end", "cycle_end"]);
+    const resets = panel.cells.flatMap((cell) => (cell.kind === "meter" ? [cell.resetsAt] : []));
+    expect(resets).toEqual([cycleEnd, cycleEnd, cycleEnd]);
   });
   test("facts show spend, its cap and the cycle", () => {
     expect(panel.facts).toEqual([
@@ -417,6 +419,80 @@ describe("cursor", () => {
       resetsAt: cycleEnd,
       resetWords: "cycle_end",
     });
+  });
+  test("a weekly plan names its pools weekly, counts down on Included and shows the week", () => {
+    const week = { ...cycle, scope: "window:604800s", windowStart: cycleEnd - 7 * 24 * 3_600_000 };
+    const weekly = presentPanel(
+      connection("cursor", {
+        metrics: [
+          percent("included.total_percent", 5.4, week),
+          percent("included.auto_percent", 5.4, week),
+          percent("included.api_percent", 0, week),
+          metric("billing.renews_at", {
+            kind: "reset_timestamp",
+            unit: "timestamp",
+            scope: "billing_cycle",
+            valueText: null,
+            valueNum: null,
+            windowEnd: cycleEnd + 6 * 24 * 3_600_000,
+            resetsAt: cycleEnd + 6 * 24 * 3_600_000,
+          }),
+        ],
+      }),
+    );
+    expect(meters(weekly.cells)).toEqual([
+      ["Included", "weekly", 5.4],
+      ["Auto Pool", "weekly", 5.4],
+      ["API Pool", "weekly", 0],
+    ]);
+    const words = weekly.cells.flatMap((cell) => (cell.kind === "meter" ? [cell.resetWords] : []));
+    expect(words).toEqual(["resets", "resets", "resets"]);
+    expect(weekly.facts).toEqual([
+      { key: "cycle", label: "Week", value: "Oct 19 to Oct 26" },
+      { key: "billing.renews_at", label: "Renews", value: "Nov 1" },
+    ]);
+    // On a monthly plan the renewal is the cycle end, which the Cycle fact already shows.
+    const monthly = presentPanel(
+      connection("cursor", {
+        metrics: [
+          percent("included.total_percent", 17, cycle),
+          metric("billing.renews_at", {
+            kind: "reset_timestamp",
+            unit: "timestamp",
+            scope: "billing_cycle",
+            valueText: null,
+            valueNum: null,
+            resetsAt: cycleEnd,
+          }),
+        ],
+      }),
+    );
+    expect(monthly.facts.map((fact) => fact.label)).toEqual(["Cycle"]);
+  });
+  test("a team seat's shared pool is its own meter after the included pools", () => {
+    const pooled = presentPanel(
+      connection("cursor", {
+        metrics: [
+          metric("included.total_percent", { ...cycle, availability: "unknown" }),
+          percent("team_pool.used_percent", 25, cycle),
+          percent("grok_bot.used_percent", 88, { scope: "window:604800s" }),
+          metric("team_pool.limit", {
+            kind: "spending_cap",
+            unit: "USD",
+            scope: "billing_cycle",
+            valueText: "800.00",
+            valueNum: 800,
+          }),
+        ],
+      }),
+    );
+    expect(meters(pooled.cells)).toEqual([
+      ["Included", "billing cycle", null],
+      ["Team Pool", "$800 shared", 25],
+      ["Grok Bot", "weekly", 88],
+    ]);
+    expect(pooled.cells.some((cell) => cell.key === "team_pool.limit")).toBe(false);
+    expect(pooled.tightest).toMatchObject({ label: "Team Pool", used: 25, resetsAt: cycleEnd });
   });
   test("Grok Bot is its own weekly meter after the pools, and never the account's headline", () => {
     const weekEnd = cycleStart + 5 * 24 * 3_600_000;

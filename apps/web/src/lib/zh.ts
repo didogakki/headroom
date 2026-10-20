@@ -194,6 +194,7 @@ const labels: Readonly<Record<string, string>> = {
   "Included Usage": "包含用量",
   "Auto Pool": "自动池",
   "API Pool": "API 池",
+  "Team Pool": "团队共享池",
   "Weekly Pool": "每周池",
   "AI Credits": "AI 积分",
   "Usage Credits": "使用积分",
@@ -217,6 +218,8 @@ const labels: Readonly<Record<string, string>> = {
   "30-Day Spend": "30天支出",
   Spend: "支出",
   Cycle: "周期",
+  Week: "周",
+  Renews: "续费日期",
   Chat: "聊天",
   Completions: "补全",
   "Extra usage this month": "本月额外用量",
@@ -252,6 +255,8 @@ function zhWindowPart(part: string): string {
   if (days?.[1] !== undefined) return `${days[1]}天`;
   const plan = /^(\$[\d,.]+) plan$/.exec(part);
   if (plan?.[1] !== undefined) return `${plan[1]} 套餐`;
+  const shared = /^(\$[\d,.]+) shared$/.exec(part);
+  if (shared?.[1] !== undefined) return `${shared[1]} 共享额度`;
   return part;
 }
 

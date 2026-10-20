@@ -20,8 +20,8 @@ export type Cell =
       readonly used: number | null;
       readonly unlimited: boolean;
       readonly resetsAt: number | null;
-      /** How the caption words the reset: "Resets in", "Cycle ends in", or "Resets with the cycle" with no time. */
-      readonly resetWords: "resets" | "cycle_end" | "with_cycle" | "not_started";
+      /** How the caption words the reset: "Resets in" or "Cycle ends in". */
+      readonly resetWords: "resets" | "cycle_end" | "not_started";
       readonly decimals: number;
     }
   | {
@@ -460,23 +460,39 @@ function codex(context: Context): Built {
 function cursor(context: Context): Built {
   const limit = take(context, "included.limit");
   const cap = limit === null ? null : numberOf(limit);
-  const planWindow = cap === null ? "billing cycle" : `${formatUsd(cap).replace(/\.00$/, "")} plan`;
+  // A weekly plan (The X Subscription) names its pools by a window scope; a monthly plan's follow the billing cycle.
+  const total = context.metrics.get("included.total_percent");
+  const weekly = total !== undefined && windowSeconds(total.scope) !== null;
+  const includedWindow = weekly ? "weekly" : "billing cycle";
+  const planWindow = cap === null ? includedWindow : `${formatUsd(cap).replace(/\.00$/, "")} plan`;
+  const poolLimit = take(context, "team_pool.limit");
+  const poolCap = poolLimit === null ? null : numberOf(poolLimit);
+  const poolWindow =
+    poolCap === null ? "billing cycle" : `${formatUsd(poolCap).replace(/\.00$/, "")} shared`;
+  // Every included pool resets at the same moment, and each one says when.
+  const includedReset = weekly ? "resets" : "cycle_end";
   const meters = [
     ...meterFor(context, "included.total_percent", {
       label: "Included",
       window: planWindow,
       short: "Included Usage",
-      resetWords: "cycle_end",
+      resetWords: includedReset,
     }),
     ...meterFor(context, "included.auto_percent", {
       label: "Auto Pool",
-      window: "billing cycle",
-      resetWords: "with_cycle",
+      window: includedWindow,
+      resetWords: includedReset,
     }),
     ...meterFor(context, "included.api_percent", {
       label: "API Pool",
-      window: "billing cycle",
-      resetWords: "with_cycle",
+      window: includedWindow,
+      resetWords: includedReset,
+    }),
+    // A team seat on a shared allowance: the team's pool, never the member's own included usage.
+    ...meterFor(context, "team_pool.used_percent", {
+      label: "Team Pool",
+      window: poolWindow,
+      resetWords: "cycle_end",
     }),
     // Grok Bot has its own allowance with its own reset, apart from the billing-cycle pools above.
     ...meterFor(context, "grok_bot.used_percent", { label: "Grok Bot", window: "weekly" }),
@@ -499,12 +515,22 @@ function cursor(context: Context): Built {
       ),
     );
   }
-  const cycle = context.metrics.get("included.total_percent");
-  if (cycle?.windowStart !== null && cycle?.windowStart !== undefined && cycle.windowEnd !== null) {
+  if (total?.windowStart !== null && total?.windowStart !== undefined && total.windowEnd !== null) {
     facts.push(
-      factOf("cycle", "Cycle", `${shortDate(cycle.windowStart)} to ${shortDate(cycle.windowEnd)}`),
+      factOf(
+        "cycle",
+        weekly ? "Week" : "Cycle",
+        `${shortDate(total.windowStart)} to ${shortDate(total.windowEnd)}`,
+      ),
     );
   }
+  // The next billing date, where it is not already the cycle end above: a weekly plan still bills monthly.
+  const renews = take(context, "billing.renews_at")?.resetsAt ?? null;
+  if (
+    renews !== null &&
+    (total === undefined || shortDate(renews) !== shortDate(total.windowEnd ?? 0))
+  )
+    facts.push(factOf("billing.renews_at", "Renews", shortDate(renews)));
   return { meters, others: [], facts };
 }
 
@@ -678,6 +704,11 @@ const primaryKeys: Partial<Record<OverviewConnection["provider"], string>> = {
   grok: "weekly_pool.used_percent",
 };
 
+/** Stands in for the primary meter when it is unknown: a Cursor team seat on a shared pool has no included total. */
+export const fallbackPrimaryKeys: Partial<Record<OverviewConnection["provider"], string>> = {
+  cursor: "team_pool.used_percent",
+};
+
 function holdOf(
   connection: OverviewConnection,
   credits: readonly ResetCredit[],
@@ -704,7 +735,9 @@ function tightestOf(
   meters: readonly MeterCell[],
 ): PanelModel["tightest"] {
   const candidates = meters.filter((cell) => cell.used !== null && !cell.unlimited);
-  const primary = candidates.find((cell) => cell.key === primaryKeys[provider]);
+  const primary =
+    candidates.find((cell) => cell.key === primaryKeys[provider]) ??
+    candidates.find((cell) => cell.key === fallbackPrimaryKeys[provider]);
   let best = primary;
   if (best === undefined) {
     for (const cell of candidates) {

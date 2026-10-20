@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { zhFactValue } from "./zh";
+import { zhFactValue, zhLabel, zhWindow } from "./zh";
+
+describe("Cursor pool wording", () => {
+  test("translates the shared pool and subscription facts", () => {
+    expect(zhLabel("Team Pool")).toBe("团队共享池");
+    expect(zhLabel("Week")).toBe("周");
+    expect(zhLabel("Renews")).toBe("续费日期");
+    expect(zhWindow("$20 shared")).toBe("$20 共享额度");
+  });
+});
 
 describe("zhFactValue", () => {
   test("translates a Cursor spend against its cap", () => {
