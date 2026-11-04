@@ -165,11 +165,26 @@ describe("demo mode guard", () => {
   afterEach(() => {
     devicePrefs().setDemo(false);
   });
+  test("Demo Mode shows synthetic devices without a request", async () => {
+    const prefs = devicePrefs();
+    prefs.setDemo(true);
+    const calls = stub({ tokens: [{ key: "must-not-be-read" }] });
+    try {
+      const { tokens } = await api.tokens();
+      expect(tokens.map((token) => token.id)).toEqual(["demo-token-studio", "demo-token-desk"]);
+      expect(JSON.stringify(tokens)).not.toContain("must-not-be-read");
+      expect(calls).toEqual([]);
+    } finally {
+      prefs.setDemo(false);
+    }
+  });
   test("account changes are refused without a request", async () => {
     devicePrefs().setDemo(true);
     const calls = stub({});
     const refused = [
       api.rename("demo-1", "Work"),
+      api.createToken("Test Mac", false),
+      api.revokeToken("synthetic-id"),
       api.pause("demo-1", true),
       api.refresh("demo-1"),
       api.disconnect("demo-1"),
@@ -204,13 +219,15 @@ describe("demo mode guard", () => {
         window: "weekly",
         thresholdPercent: 100,
         minHoursLeft: 24,
+        beforeExpiry: true,
+        beforeExpiryMinutes: 2,
       }),
       api.clearAutoReset("demo-1"),
       api.setBudget("demo-1", "on_demand.used", 50),
       api.clearBudget("demo-1", "on_demand.used"),
     ];
     const causes = await Promise.all(refused.map((call) => call.catch((error: unknown) => error)));
-    expect(causes).toHaveLength(17);
+    expect(causes).toHaveLength(19);
     for (const cause of causes) {
       expect(cause).toMatchObject({ status: 409, code: "demo_mode", message: demoRefusal });
       expect(isDemoRefusal(cause)).toBe(true);
@@ -256,6 +273,8 @@ describe("demo mode guard", () => {
       window: "either" as const,
       thresholdPercent: 95 as const,
       minHoursLeft: 12 as const,
+      beforeExpiry: true,
+      beforeExpiryMinutes: 2 as const,
     };
     const rules = stub({ autoReset: rule });
     expect(await api.setAutoReset("c1", rule)).toEqual({ autoReset: rule });
@@ -287,6 +306,8 @@ describe("demo mode guard", () => {
           window: "weekly",
           thresholdPercent: 100,
           minHoursLeft: 24,
+          beforeExpiry: true,
+          beforeExpiryMinutes: 2,
         }),
       ),
     ).toBe("The server sent an unexpected response");

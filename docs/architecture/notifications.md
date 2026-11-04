@@ -1,6 +1,6 @@
 # Notifications
 
-Headroom tells the owner when an account needs attention. The browser builds each notification from the latest overview and the owner's settings, then shows it in the bell. The server builds the same events after each collection pass and delivers them to Telegram chats and webhooks the owner set up. Every notification is a `NotificationEvent`; read state stays in the browser.
+Headroom tells the owner when an account needs attention. The browser builds each notification from the latest overview and the owner's settings, then shows it in the bell. The server builds the same events after each collection pass and delivers them to Telegram chats and webhooks the owner set up. Every notification is a `NotificationEvent`; the server keeps which ones the owner has read, so the browser and the Mac app agree.
 
 Code: `packages/view-model/src/notifications.ts` (detection, shared by the web app and the server), `packages/view-model/src/automation.ts` (what the Automations settings list), `packages/core/src/notification-event.ts` (event schema), `packages/core/src/settings.ts` (settings). Enumerations are in `packages/core/src/enums.ts` and [the data model](data-model.md). The detected events, auto-reset rule and budgets behind the newer kinds are specified in [ADR 0003](../decisions/0003-owner-automations.md).
 
@@ -37,7 +37,7 @@ Tone is `bad`, `warn` or `info`. "Left" is the percent of the limit still free. 
 | `credits_expiring` | A Wallet top-up has an expiry and an alert, today (UTC) is within `expiryAlertDays` of `expiresOn`, and `expiresOn` has not passed. Claude: the soonest-lapsing usage credits (`prepaid.expiring`) or the cloud credits left (`cloud_credits.remaining`) expire within `resetLeadDays` | `warn` | `credits_expiring` | `credits_expiring:<topUpId>:<expiresOn>`; Claude `credits_expiring:<metricKey>:<expiresAt>` |
 | `reset_granted` | A `reset_granted` event from the last 72 hours | `info` | `reset_granted` | `reset_granted:<eventId>` |
 | `early_reset` | An `early_reset` event from the last 72 hours. `includeSessions` off skips windows of 5 hours or less. With `bankedUsed`, the message adds that a banked reset was used outside Headroom | `info` | `early_reset` | `early_reset:<eventId>` |
-| `auto_reset` | An `auto_reset` event from the last 72 hours | `info` when succeeded, `warn` when failed or `uncertain` | `auto_reset` | `auto_reset:<eventId>` |
+| `auto_reset` | An `auto_reset` event from the last 72 hours, for a spent limit or a banked reset used before it expired (`trigger: "expiry"`). Retries of one credit before expiry give one notice per outcome: the first attempt that failed, ended `uncertain` or succeeded | `info` when succeeded, `warn` when failed or `uncertain` | `auto_reset` | `auto_reset:<eventId>` |
 | `top_up_detected` | A `top_up_detected` event from the last 72 hours. A Claude usage-credit rise is in USD and adds no Wallet top-up, because the Wallet counts credits | `info` | `top_up_detected` | `top_up_detected:<eventId>` |
 | `refresh_failed` | Two or more refreshes in a row failed (`latestRun.failureStreak`), state is not paused | `warn` | `refresh_failed` | `refresh_failed::<lastSuccessAt>` |
 | `disconnected` | Connection state is `reconnect_required` | `bad` | `disconnected` | `disconnected:<reconnectReason>:<lastSuccessAt>` |
@@ -74,7 +74,8 @@ Rules that apply to every kind:
 - Claude reports the weekly all-models limit and model-scoped weekly limits that overlap it. When the all-models limit and a scoped limit are both low with the same tone, only the tighter one is raised. With different tones, both are raised.
 - Money is in USD. Grok, Codex and Vercel figures are credits and never use a dollar sign. Units are never converted.
 - Event notices come from `connection.events` (the last 7 days, at most 20) and show for 72 hours after `occurredAt`. Budget notices come from `connection.automation.budgets`; the overview carries both, so the browser bell and server delivery derive the same notices. Expiring credits come from the Wallet's top-ups, passed to the derivation as `topUps`.
-- Read state stays in the browser. Ids of switched-off kinds are kept so a toggle does not mark them unread again.
+- Read state lives on the server, in `notice_reads` (see [the data model](data-model.md)), and is shared by every browser and the Mac app ([ADR 0005](../decisions/0005-shared-notice-read-state.md)). The browser reads it with `GET /api/notices/read` and writes with `PUT /api/notices/read`; the Mac app uses `PUT /api/app/v1/notices/read` and the `read` flag on each feed notice. Both sides use the same notice id, which does not depend on the time zone or the time style. Ids of switched-off kinds are kept so a toggle does not mark them unread again.
+- The browser polls the set every minute, shows a mark at once and sends it. If the send fails, it loads the server's set again. A mark is kept for 90 days and removed on a later write, because a notice id changes with each period. A browser that still holds read ids in local storage sends them to the server on its first load and then clears them. Demo Mode keeps its read state in memory and never calls these routes.
 
 ## Settings
 

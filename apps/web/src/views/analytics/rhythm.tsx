@@ -3,7 +3,6 @@ import { useCallback, useMemo, useRef, useState, type PointerEvent, type ReactNo
 import { BrandMark } from "../../icons.tsx";
 import { Segmented } from "../../ui/segmented.tsx";
 import {
-  AccountFilter,
   CardTop,
   FullName,
   Legend,
@@ -14,13 +13,20 @@ import {
   hour,
   useCardSwitch,
   useHeadline,
-  useStoredView,
   useTipLayer,
   useWidth,
   weekdays,
   type Line,
 } from "./common.tsx";
 import { shortDate } from "./format.ts";
+import {
+  rhythmDefault,
+  rhythmStore,
+  rhythmViewKeys,
+  rhythmViews,
+  type RhythmView,
+} from "./reports.ts";
+import { useStoredView } from "./stored-view.ts";
 import { compactLabel, hourOfWeek, slotCount, type AccountSeries, type Series } from "./series.ts";
 import "./rhythm.css";
 
@@ -29,23 +35,23 @@ import "./rhythm.css";
  * accounts is a count of active accounts, never a sum of percentages. An unknown hour is an empty dotted cell.
  */
 
-type View = "matrix" | "weeks" | "range" | "accounts";
-const views = [
-  { value: "matrix", label: "矩阵" },
-  { value: "weeks", label: "按周" },
-  { value: "range", label: "范围" },
-  { value: "accounts", label: "按账户" },
-] as const satisfies readonly { readonly value: View; readonly label: string }[];
-const viewKeys: readonly View[] = views.map((entry) => entry.value);
-
-export function RhythmCard(props: { readonly series: Series }) {
-  const [view, setView] = useStoredView<View>("rhythm", viewKeys, "matrix");
+export function RhythmCard(props: {
+  readonly series: Series;
+  /** The series narrowed to the account in view; the same as `series` when every account is in view. */
+  readonly focused: Series;
+  /** The account in view, or null for every account. */
+  readonly account: AccountSeries | null;
+}) {
+  const [view, setView] = useStoredView<RhythmView>(rhythmStore, rhythmViewKeys, rhythmDefault);
+  const { series, focused, account } = props;
+  // Matrix and Weeks draw one account in their own mode, against the owner's whole series; Range and By Account
+  // draw only the accounts in view.
   return (
-    <ViewCard title="节律" views={views} view={view} onView={setView}>
-      {view === "matrix" ? <Matrix series={props.series} /> : null}
-      {view === "weeks" ? <Weeks series={props.series} /> : null}
-      {view === "range" ? <RangeView series={props.series} /> : null}
-      {view === "accounts" ? <ByAccount series={props.series} /> : null}
+    <ViewCard title="节律" views={rhythmViews} view={view} onView={setView}>
+      {view === "matrix" ? <Matrix series={series} account={account} /> : null}
+      {view === "weeks" ? <Weeks series={series} account={account} /> : null}
+      {view === "range" ? <RangeView series={focused} /> : null}
+      {view === "accounts" ? <ByAccount series={focused} /> : null}
     </ViewCard>
   );
 }
@@ -208,7 +214,7 @@ function dayProfile(series: Series, account: AccountSeries | null) {
   return { wd: mean(0), we: mean(1) };
 }
 
-function summary(series: Series, account: AccountSeries | null) {
+export function summary(series: Series, account: AccountSeries | null) {
   const { wd } = dayProfile(series, account);
   let best = 0;
   let bestSum = -1;
@@ -314,13 +320,11 @@ const Dot = (props: { readonly cx: number; readonly cy: number; readonly r: numb
 
 /* ----------------------------------------------------------------- Matrix */
 
-function Matrix(props: { readonly series: Series }) {
-  const { series } = props;
-  const [selected, setSelected] = useState<string | null>(null);
+function Matrix(props: { readonly series: Series; readonly account: AccountSeries | null }) {
+  const { series, account } = props;
   const [lanes, setLanes] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const width = useWidth(box);
-  const account = series.accounts.find((entry) => entry.id === selected) ?? null;
   const sm = useMemo(() => summary(series, account), [series, account]);
   const readout = useReadout({ big: sm.big, cap: sm.cap });
   const { bind, bindLazy } = readout;
@@ -592,10 +596,7 @@ function Matrix(props: { readonly series: Series }) {
 
   return (
     <div className="rh-view">
-      <CardTop
-        headline={readout.headline}
-        tools={<AccountFilter accounts={series.accounts} value={selected} onChange={setSelected} />}
-      />
+      <CardTop headline={readout.headline} />
       <div className="rh-box" ref={box}>
         {width > 0 ? (
           <svg width={width} height={height} aria-label={aria}>
@@ -778,12 +779,10 @@ function WindowStrips(props: {
 
 /* ------------------------------------------------------------------ Weeks */
 
-function Weeks(props: { readonly series: Series }) {
-  const { series } = props;
-  const [selected, setSelected] = useState<string | null>(null);
+function Weeks(props: { readonly series: Series; readonly account: AccountSeries | null }) {
+  const { series, account } = props;
   const box = useRef<HTMLDivElement>(null);
   const width = useWidth(box);
-  const account = series.accounts.find((entry) => entry.id === selected) ?? null;
   const sm = useMemo(() => summary(series, account), [series, account]);
   const { day0 } = useMemo(() => calendarOf(series), [series]);
 
@@ -1027,10 +1026,7 @@ function Weeks(props: { readonly series: Series }) {
   const aria = `典型周，其后每周一行，内容为${account === null ? "活跃账户数" : `${account.label} 的用量`}。${base.big}。${sm.cap}。`;
   return (
     <div className="rh-view">
-      <CardTop
-        headline={readout.headline}
-        tools={<AccountFilter accounts={series.accounts} value={selected} onChange={setSelected} />}
-      />
+      <CardTop headline={readout.headline} />
       <div className="rh-box" ref={box}>
         {width > 0 ? (
           <svg width={width} height={y} aria-label={aria}>
@@ -1117,6 +1113,16 @@ function Weeks(props: { readonly series: Series }) {
 
 /* ------------------------------------------------------------------ Range */
 
+/** A label cut to `max` characters, for a narrow column. */
+const shorten = (text: string, max: number): string =>
+  text.length > max ? `${text.slice(0, max - 1)}…` : text;
+// Keeps a trailing "(personal)" style suffix, since twin accounts differ only there.
+const fitLabel = (text: string, max: number): string => {
+  const tail = / \([^)]*\)$/.exec(text)?.[0] ?? "";
+  return text.length > max && tail !== "" && tail.length < max - 4
+    ? `${text.slice(0, max - tail.length - 1).trimEnd()}…${tail}`
+    : shorten(text, max);
+};
 const typicalKey = (i: number): string => `t${weekdays[Math.floor(i / 24)] ?? ""}${i % 24}`;
 const rangeDays = slotCount / 24;
 const fixed = (value: number | null): string => (value === null ? "无" : value.toFixed(1));
@@ -1621,6 +1627,8 @@ function ByAccount(props: { readonly series: Series }) {
   const narrow = width < 520;
   const left = narrow ? 108 : 160;
   const right = narrow ? 68 : 104;
+  // 11 px labels average about 6 px a character; the mark and a gap take 26 px.
+  const labelChars = Math.floor((left - 26) / 6);
   const cols = Math.max(0, width - left - right);
   const cw = cols / 24;
   // "00:00" needs about 32 px; on a phone six hours of columns are narrower, so the axis marks every twelve.
@@ -1808,7 +1816,9 @@ function ByAccount(props: { readonly series: Series }) {
                   <Mark account={row.account} x={0} y={y + ch / 2 - 7} />
                   <text className="rh-t rh-t2" x={20} y={y + ch / 2 + 4}>
                     <title>{row.account.label}</title>
-                    {narrow ? compactLabel(row.account.label) : row.account.label}
+                    {narrow
+                      ? compactLabel(row.account.label)
+                      : fitLabel(row.account.label, labelChars)}
                   </text>
                   <text
                     className="rh-t rh-t2"

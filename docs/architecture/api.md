@@ -1,8 +1,8 @@
 # HTTP API
 
-**Status: implemented in `apps/server`. The web client in `apps/web` is the only consumer.**
+**Status: implemented in `apps/server`. The web client in `apps/web` uses sessions; the app API uses tokens that read, and optionally change Refresh Every.**
 
-Every route lives under `/api`. Instants are epoch milliseconds. All routes except `/api/auth/*`, `/api/setup` and `/healthz` need a Better Auth session. Mutating routes also pass the cross-site guard. Error bodies are `{ "error": "<code>" }`.
+Every route lives under `/api`. Instants are epoch milliseconds. All routes except `/api/auth/*`, `/api/setup`, `/healthz` and `/api/app/v1/*` need a Better Auth session. Mutating routes also pass the cross-site guard. Error bodies are `{ "error": "<code>" }`.
 
 ## Routes
 
@@ -24,7 +24,61 @@ Every route lives under `/api`. Instants are epoch milliseconds. All routes exce
 | `PUT /api/wallet/costs/:connectionId`, `DELETE /api/wallet/costs/:connectionId` | Set the cost of one connection, or clear it back to Not set |
 | `POST /api/wallet/top-ups`, `PUT /api/wallet/top-ups/:id`, `DELETE /api/wallet/top-ups/:id` | Record a top-up, edit one, or remove one |
 | `GET /api/exchange-rates`, `POST /api/exchange-rates/refresh` | The daily reference rates the Wallet converts with; the POST fetches them again now, at most once a minute, and touches no account |
+| `GET /api/tokens`, `POST /api/tokens`, `DELETE /api/tokens/:id` | Session-only device token management, see [API tokens](#api-tokens) |
+| `GET /api/app/v1/feed?tz=<minutes>` | Token-only account feed, notices and Wallet summary, see [App feed](#app-feed) |
+| `GET /api/app/v1/whoami` | Token-only API version, server version, token name and scopes |
+| `GET /api/notices/read`, `PUT /api/notices/read` | Session-only: the ids of notices marked read, and marking ids read or unread, see [Notice read state](#notice-read-state) |
+| `PUT /api/app/v1/notices/read` | Token-only, any scope: mark notices read or unread, see [Notice read state](#notice-read-state) |
+| `PUT /api/app/v1/settings/refresh` | Token-only, `refresh` scope: set Refresh Every, see [API tokens](#api-tokens) |
 | `/api/delivery/...` | Notification channels (Telegram, webhook), tests and Telegram chat discovery, see [Delivery](#delivery) |
+
+## Notice read state
+
+The server keeps one set of read notice ids for the owner. A notice id is the same in the dashboard and in the feed. The time zone and the time style change only the text, never the id.
+
+`GET /api/notices/read` (session) returns `{ "ids": [string] }`, sorted. `PUT /api/notices/read` (session) takes `{ "ids": [string], "read": boolean }` and returns the whole set as `{ "ids": [string] }`. `read: true` marks the ids read and `read: false` marks them unread. One call can carry up to 500 ids, each 1 to 300 characters, so "Mark all read" is one call. Any other body is 400 `invalid_body`.
+
+`PUT /api/app/v1/notices/read` (token) takes the same body and returns it unchanged: `{ "ids": [string], "read": boolean }`. Any valid token may call it, including a read-only one, because it changes only Headroom's own read marks and never a provider account. A write removes marks older than 90 days. The change shows in the next feed as `read` on each notice, and it changes the feed's `ETag`.
+
+## API tokens
+
+Settings, Devices lets the owner name, create and revoke a token. `POST /api/tokens` accepts only `{ name, refresh? }`, the name trimmed to 1-40 characters. `refresh: true` adds the `refresh` scope (D44). It returns `{ id, name, key }` once. `GET /api/tokens` returns `{ tokens }`; each entry has `id`, `name`, `prefix`, `start`, `createdAt`, `lastUsedAt`, `expiresAt` and `scopes`. The last two times can be null. It never returns the key or its hash. `DELETE /api/tokens/:id` returns `{ success: true }`, or 404 `not_found`. These routes require a session; mutations also pass the cross-site guard. Responses use `Cache-Control: no-store`.
+
+The Better Auth API key plugin stores a hash, assigns `{ app: ["read"] }`, or `{ app: ["read", "refresh"] }` when the owner opted in, and has API key sessions disabled. Its HTTP management endpoints are blocked; only the Headroom routes above manage tokens. Tokens have no expiry by default. The plugin checks expiry, revocation and permission on each app request. Its per-key rate limit is off: its window resets only after a quiet minute, so steady polling would lock a valid token out. The address limit on failed guesses still applies.
+
+`/api/app/v1/*` accepts only `Authorization: Bearer <token>`. A session cookie or `x-api-key` cannot authenticate it. GET and HEAD are allowed, except on `/api/app/v1/settings/refresh` and `/api/app/v1/notices/read`, which allow only PUT; other methods return 405 `method_not_allowed` with the matching `Allow`. Missing, invalid, expired, revoked or unscoped keys return 401 `invalid_token`. Ten failed attempts from one client address within a minute block further attempts with 429 `rate_limited` and `Retry-After`. This bounded, in-memory limit resets on server restart and uses the same trusted-proxy policy as sign-in. A token cannot authenticate any session route. A token can change two things. Read marks need no scope beyond `read` (see [Notice read state](#notice-read-state)). Refresh Every needs the `refresh` scope: `PUT /api/app/v1/settings/refresh` takes `{ refreshIntervalMinutes }`, one of the Refresh Every options, saves it and returns it. Any other key or value is 400 `invalid_body`. A valid token without the scope gets 403 `missing_permission`, which does not count as a failed attempt.
+
+`GET /api/app/v1/whoami` returns `{ apiVersion: 1, serverVersion, tokenName, scopes }`, so a client knows whether it may change Refresh Every. Both app responses are validated against the Zod schemas in `packages/view-model/src/app-feed.ts`. Demo Mode hides the real token list and refuses token changes; the static demo returns an empty list and the usual demo refusal.
+
+## App feed
+
+`GET /api/app/v1/feed?tz=<minutes>` needs a read token. A session cookie does not grant access. The offset has the same syntax and range as [History](#history): a whole number of minutes east of UTC, from -720 to 840, default 0. An invalid value returns 400 `invalid_tz` after authentication.
+
+The strict `appFeedSchema` in `packages/view-model/src/app-feed.ts` defines the response. Instants are epoch milliseconds. Unknown values are null; a known zero stays zero.
+
+| Field | Content |
+| --- | --- |
+| `apiVersion`, `serverVersion` | Literal `1` and the server version |
+| `generatedAt` | When this representation was built. It stays fixed while its content is unchanged in the route's bounded, per-offset cache |
+| `refreshIntervalMs`, `staleAfterMs` | Collection cadence and the age after which the app marks a reading stale |
+| `dashboardUrl` | `HEADROOM_PUBLIC_URL`, or null; the app can fall back to its configured source URL |
+| `providerOrder`, `accounts` | The same provider and account order as the overview |
+| `summary.monthlyPlanTotal` | Wallet monthly price total as `{ minor, currency }`, or null when no cost is entered or a conversion rate is missing |
+| `summary.extraSpend` | Spend totals as `{ unit, value }`, sorted by unit. Any unread spend makes that unit's total null |
+| `summary.nextLimitBack` | The earliest future reset of an exhausted limit on a ready or partial account, as `{ accountId, metricKey, at }`, or null. Cursor parts do not count |
+| `notices` | Validated `notificationEventSchema` events from the delivery derivation, with exact time style, the request offset and Wallet expiry notices. Each adds `read`, true when the owner marked it read. Dashboard links use `dashboardUrl` when set |
+
+Each account carries its internal `id`, provider, display name, plan, display identity, state, reconnect reason, interface, `lastSuccessAt` and `observedAt`. These timestamps let the app show age without changing the feed each second. It carries no provider account id, workspace id, credential, raw response or run error text.
+
+`limits` contains `key`, `label`, `window`, `windowKind`, `percentLeft`, `unlimited`, `notStarted`, `resetsAt`, `resetWords`, `runsOutAt`, `part` and `interface`. The shared panel and account helpers supply percent left and labels. `runsOutAt` projects a weekly limit at its recent burn rate from the reading time, with the pacing notice's gates but without its one-day lead: it is set whenever the limit runs out before it resets. It stays fixed between collections and is null when no qualifying pace exists or the limit lasts to the reset. The app labels it “if the pace holds”. Cursor Auto and API pools have `part: true`.
+
+`charges` keeps each metric's unit and interface. Each entry has `key`, `label`, `kind` (`spend`, `balance` or `count`), `value`, `unit`, `cap` (`{ value, unit }` or null), `window`, `unlimited` and `availability`. Provider spending caps use the same mapping and scope rule as notices. An owner budget is a separate concept. `banked` is `{ count, unit, expiries, interface }` or null; its sorted expiries contain no credit ids. Unknown inventory counts stay null.
+
+The Wallet total uses the owner's display currency and the server's stored exchange rates. With no selected currency, the server uses USD because the request has no browser locale. A free or included plan contributes a known zero. Unset account costs stay outside the total. A feed read does not collect from providers or fetch exchange rates.
+
+The route sends `Cache-Control: no-store` and a strong `ETag`, the quoted SHA-256 hash of the exact JSON body. A matching `If-None-Match` returns 304 with the ETag and no body. A list of validators, weak validators and `*` are accepted for GET and HEAD. Content changes, including notice changes, produce a new body and validator. The route keeps up to eight offset representations in process memory; eviction or restart can produce a new `generatedAt`.
+
+`mise run mac:contract` writes `apps/macos/Contract/openapi.json` from the feed and whoami Zod schemas with `z.toJSONSchema()`. The OpenAPI 3.1 document has sorted keys and stable formatting. `mise run check` runs its `--check` mode and fails if the committed file differs. It builds no Swift code.
 
 ## History
 
@@ -51,7 +105,7 @@ The route keeps the last eight serialized bodies in process memory. The key is `
 - `actions`: `{ enabled, supported }`, where `enabled` is the effective gate.
 - `events`: the account's events from the last 7 days, newest first, at most 20. Each is `{ id, connectionId, occurredAt, metricKey, detail }` and `detail` is one of the `accountEventDetailSchema` shapes (`reset_granted`, `early_reset`, `top_up_detected`, `auto_reset`). They carry numbers and ids only. One query reads the events of every account.
 - `pace`: the recent burn rate of each percent limit, as `{ metricKey, ratePerHour, from, to }`: percentage points used per hour over the readings from `from` to `to`. A limit with no entry has an unknown pace, never zero. The server measures it from the last 24 hours of stored readings and keeps it until the account gets a new reading. See [Pacing](notifications.md#pacing).
-- `automation`: `{ autoReset, budgets }`. `autoReset` is the owner's rule `{ enabled, window, thresholdPercent, minHoursLeft }` or null. `budgets` lists `{ metricKey, amount, unit }`, one per spend metric the owner set a budget for.
+- `automation`: `{ autoReset, budgets }`. `autoReset` is the owner's rule `{ enabled, window, thresholdPercent, minHoursLeft, beforeExpiry, beforeExpiryMinutes }` or null. Null means the default rule (`defaultAutoResetRule`): both triggers off, with a 2-minute lead time for use-before-expiry. `budgets` lists `{ metricKey, amount, unit }`, one per spend metric the owner set a budget for.
 
 The response carries no provider account id or workspace id. The detail route is built field by field for the same reason.
 
@@ -73,7 +127,7 @@ The response carries no provider account id or workspace id. The detail route is
 | --- | --- | --- |
 | `limitsView` | `used`, `left` | `used` |
 | `lowThresholdPercent` | 30, 20, 15 (percent left below which a limit reads "running low") | 30 |
-| `refreshIntervalMinutes` | 5, 10, 15, 30 | the option nearest to `HEADROOM_REFRESH_INTERVAL_SECONDS` |
+| `refreshIntervalMinutes` | 2, 5, 10, 15, 30 | the option nearest to `HEADROOM_REFRESH_INTERVAL_SECONDS` |
 | `timeStyle` | `countdown`, `exact` | `countdown` |
 | `clock` | `24h`, `12h` | `24h` |
 | `density` | `comfortable`, `compact` | `comfortable` |
@@ -106,7 +160,7 @@ Every Wallet route needs a session; the mutating ones also pass the cross-site g
 
 Both routes need a session and the cross-site guard. The rules and the ADR behind them are in [ADR 0003](../decisions/0003-owner-automations.md).
 
-`PUT /api/connections/:id/auto-reset` takes `{ enabled, window, thresholdPercent, minHoursLeft }`: `window` is `weekly`, `session` or `either`, `thresholdPercent` is 90, 95 or 100, `minHoursLeft` is 1, 3, 6, 12, 24 or 48. It answers `{ autoReset }`. `DELETE` answers `{ autoReset: null }`. Errors: `400 invalid_body`, `404 unknown_connection`, and `409 unsupported_action` when the provider's connector cannot consume a reset credit. A saved rule does nothing while "Allow Account Actions" is off.
+`PUT /api/connections/:id/auto-reset` takes `{ enabled, window, thresholdPercent, minHoursLeft, beforeExpiry, beforeExpiryMinutes }`: `window` is `weekly`, `session` or `either`, `thresholdPercent` is 90, 95 or 100, `minHoursLeft` is 1, 3, 6, 12, 24 or 48, `beforeExpiryMinutes` is 2, 5 or 10. It answers `{ autoReset }`. `DELETE` answers `{ autoReset: null }`, which brings back the default rule. Errors: `400 invalid_body`, `404 unknown_connection`, and `409 unsupported_action` when the provider's connector cannot consume a reset credit. A saved rule does nothing while "Allow Account Actions" is off.
 
 `PUT /api/connections/:id/budgets/:metricKey` takes `{ amount }`, a positive number up to 1,000,000,000. The unit is not in the request: the server copies it from that metric in the latest snapshot. It answers `{ budgets }`, every budget of that account. `DELETE` clears one budget and answers the same shape. Errors: `400 invalid_body`, `404 unknown_connection`, and `409 not_a_spend_metric` when the latest snapshot has no metric of kind `spend` with that key, or its unit is not a notification amount unit.
 

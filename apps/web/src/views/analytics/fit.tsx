@@ -12,10 +12,10 @@ import {
   Swatch,
   useHeadline,
   useTipLayer,
-  useStoredView,
   useWidth,
   ViewCard,
 } from "./common.tsx";
+import { useStoredView } from "./stored-view.ts";
 import { dollars, shortDate } from "./format.ts";
 import { hourOfWeek, usedAt, type AccountSeries, type Series } from "./series.ts";
 import "./fit.css";
@@ -563,23 +563,7 @@ function HistoryView(props: {
   const match = props.rows.find((row) => row.account.id === picked);
   // A picked id with no row must not highlight another account: show the first row, unpicked.
   const selected = match ?? first;
-  const small = props.rows.filter((row) => row.verdict === 0).length;
-  const room = props.rows.filter((row) => row.verdict === 2).length;
-  const worst = first;
-  const judged = props.rows.some((row) => row.verdict !== 3);
-  const base = !judged
-    ? {
-        big: "历史记录不足",
-        cap: `套餐适配需要某个账户至少有${MIN_WINDOWS}个完整窗口`,
-      }
-    : {
-        big: `${small}个套餐偏小，${room}个有富余`,
-        cap:
-          worst === undefined || worst.hits === 0
-            ? "90天内没有账户触达上限"
-            : `${worst.account.label} 在${worst.cells.length}${unitWords[worst.unit].count}中有${worst.hits}${unitWords[worst.unit].count}触达上限`,
-      };
-  const headline = useHeadline(base);
+  const headline = useHeadline(historyLine(props.rows));
   if (selected === undefined) return <p className="fit-empty">90天内没有已结束的窗口。</p>;
   return (
     <div className="fit-history">
@@ -1165,11 +1149,7 @@ function KeepSection(props: {
 export function PlanFitCard(props: { readonly series: Series }) {
   const [view, setView] = useStoredView<View>("fit", ["history", "actions"], "history");
   const [picked, setPicked] = useState<string | null>(null);
-  const rows = props.series.accounts
-    .filter((account) => !account.story.inactive)
-    .map((account) => historyOf(account, props.series.now))
-    .filter((history): history is History => history !== null)
-    .toSorted(compareHistory);
+  const rows = historiesOf(props.series);
   return (
     <ViewCard title="套餐适配" views={views} view={view} onView={setView}>
       {view === "actions" ? (
@@ -1186,4 +1166,37 @@ export function PlanFitCard(props: { readonly series: Series }) {
       )}
     </ViewCard>
   );
+}
+
+/** The History view's headline, worst plan first: how many plans are too small and how many have room. */
+function historyLine(rows: readonly History[]): { readonly big: string; readonly cap: string } {
+  if (!rows.some((row) => row.verdict !== 3)) {
+    return {
+      big: "历史记录不足",
+      cap: `套餐适配需要某个账户至少有${MIN_WINDOWS}个完整窗口`,
+    };
+  }
+  const small = rows.filter((row) => row.verdict === 0).length;
+  const room = rows.filter((row) => row.verdict === 2).length;
+  const worst = rows[0];
+  return {
+    big: `${small}个套餐偏小，${room}个有富余`,
+    cap:
+      worst === undefined || worst.hits === 0
+        ? "90天内没有账户触达上限"
+        : `${worst.account.label} 在${worst.cells.length}${unitWords[worst.unit].count}中有${worst.hits}${unitWords[worst.unit].count}触达上限`,
+  };
+}
+
+function historiesOf(series: Series): History[] {
+  return series.accounts
+    .filter((account) => !account.story.inactive)
+    .map((account) => historyOf(account, series.now))
+    .filter((history): history is History => history !== null)
+    .toSorted(compareHistory);
+}
+
+/** The answer the Plan fit tab states: the History view's headline. */
+export function fitLine(series: Series): { readonly big: string; readonly cap: string } {
+  return historyLine(historiesOf(series));
 }

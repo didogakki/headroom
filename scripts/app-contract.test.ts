@@ -1,0 +1,56 @@
+import { describe, expect, test } from "bun:test";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { appContract, syncAppContract } from "./app-contract.ts";
+
+describe("Mac OpenAPI contract", () => {
+  test("committed contract is deterministic and current", async () => {
+    expect(await appContract()).toBe(await appContract());
+    expect(await syncAppContract(true)).toBe(true);
+    const text = await appContract();
+    expect(text).toContain('"openapi": "3.1.0"');
+    for (const path of ["/api/app/v1/feed", "/api/app/v1/whoami", "/api/app/v1/notices/read"])
+      expect(text).toContain(`"${path}"`);
+    for (const status of ["304", "400", "401", "405", "429"]) expect(text).toContain(`"${status}"`);
+    expect(text).toContain('"scheme": "bearer"');
+    // A newer server may add fields; the Mac decoder must not reject them (D46).
+    expect(text).not.toContain('"additionalProperties": false');
+    const feed = JSON.parse(text).components.schemas.AppFeed;
+    const account = feed.properties.accounts.items;
+    expect(account.properties.lastSuccessAt).toMatchObject({
+      type: ["integer", "null"],
+      minimum: 0,
+    });
+    expect(account.properties.limits.items.properties.percentLeft).toEqual({
+      type: ["number", "null"],
+      minimum: 0,
+      maximum: 100,
+    });
+    expect(account.properties.reconnectReason.enum).toContain(null);
+    // A provider added to the server must not fail installed Mac apps (D47).
+    expect(account.properties.provider).toEqual({ type: "string" });
+    expect(feed.properties.providerOrder.items).toEqual({ type: "string" });
+    expect(feed.properties.notices.items.properties.provider.enum).toBeUndefined();
+    expect(account.properties.banked.type).toEqual(["object", "null"]);
+    expect(text).not.toContain('"anyOf"');
+  });
+
+  test("check detects a missing or stale file without writing; write repairs it", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "headroom-contract-"));
+    const path = join(directory, "openapi.json");
+    try {
+      expect(await syncAppContract(true, path)).toBe(false);
+      expect(await syncAppContract(false, path)).toBe(true);
+      expect(await syncAppContract(true, path)).toBe(true);
+      await writeFile(path, '{"stale":true}\n');
+      expect(await syncAppContract(true, path)).toBe(false);
+      expect(await readFile(path, "utf8")).toBe('{"stale":true}\n');
+      await syncAppContract(false, path);
+      expect(await syncAppContract(true, path)).toBe(true);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});

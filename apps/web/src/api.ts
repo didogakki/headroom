@@ -1,5 +1,6 @@
 import {
   accountActionKindSchema,
+  appPairingStatusSchema,
   accountActionStateSchema,
   attemptStateSchema,
   authMethodSchema,
@@ -32,6 +33,7 @@ import {
   type OverviewConnection,
 } from "@headroom/view-model/overview";
 import type { Cost, TopUp, WalletBook } from "@headroom/view-model/wallet";
+import { noticeReadSetSchema } from "@headroom/view-model/app-feed";
 import { historyWireSchema, type History } from "@headroom/view-model/history";
 import { z } from "zod";
 
@@ -89,6 +91,56 @@ const setupSchema = z.object({
   ownerExists: z.boolean(),
   minimumPasswordLength: z.number(),
   minimumUsernameLength: z.number(),
+});
+const tokenSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  prefix: z.string().nullable(),
+  start: z.string().nullable(),
+  createdAt: z.number(),
+  lastUsedAt: z.number().nullable(),
+  expiresAt: z.number().nullable(),
+  /** `refresh` lets the device change Refresh Every; every token can read. */
+  scopes: z.array(z.enum(["read", "refresh"])),
+});
+const pairingSchema = z.object({
+  name: z.string(),
+  status: appPairingStatusSchema,
+  expiresAt: z.number(),
+});
+const tokensSchema = z.object({ tokens: z.array(tokenSchema) });
+
+/** Two synthetic linked devices for Demo Mode. Their starts are made up and match no key. */
+function demoTokens(now: number): ApiToken[] {
+  const day = 86_400_000;
+  return [
+    {
+      id: "demo-token-studio",
+      name: "Studio MacBook Pro",
+      prefix: "hr_",
+      start: "hr_Demo7xQa",
+      createdAt: now - 12 * day,
+      lastUsedAt: now - 4 * 60_000,
+      expiresAt: null,
+      scopes: ["read", "refresh"],
+    },
+    {
+      id: "demo-token-desk",
+      name: "Desk Mac mini",
+      prefix: "hr_",
+      start: "hr_Demo2mKp",
+      createdAt: now - 40 * day,
+      lastUsedAt: now - 3 * day,
+      expiresAt: null,
+      scopes: ["read"],
+    },
+  ];
+}
+export type ApiToken = z.infer<typeof tokenSchema>;
+const createdTokenSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  key: z.string(),
 });
 const meSchema = z.object({ id: z.string(), name: z.string(), email: z.string() });
 const providersSchema = z.object({
@@ -388,9 +440,34 @@ export const api = {
   removeTopUp: changesAccount((id: string) =>
     request("DELETE", `/api/wallet/top-ups/${encodeURIComponent(id)}`, walletSchema),
   ),
+  tokens: () =>
+    demoOn()
+      ? Promise.resolve({ tokens: demoTokens(Date.now()) })
+      : request("GET", "/api/tokens", tokensSchema),
+  createToken: changesAccount((name: string, refresh: boolean) =>
+    request("POST", "/api/tokens", createdTokenSchema, { name, refresh }),
+  ),
+  revokeToken: changesAccount((id: string) =>
+    request(
+      "DELETE",
+      `/api/tokens/${encodeURIComponent(id)}`,
+      z.object({ success: z.literal(true) }),
+    ),
+  ),
+  pairing: (code: string) =>
+    request("GET", `/api/pairings/${encodeURIComponent(code)}`, pairingSchema),
+  decidePairing: (code: string, decision: "approve" | "deny") =>
+    request(
+      "POST",
+      `/api/pairings/${encodeURIComponent(code)}/${decision}`,
+      z.object({ success: z.literal(true) }),
+    ),
   settings: () => request("GET", "/api/settings", settingsEnvelopeSchema),
   saveSettings: (settings: Settings) =>
     request("PUT", "/api/settings", settingsEnvelopeSchema, settings),
+  noticeReads: () => request("GET", "/api/notices/read", noticeReadSetSchema),
+  setNoticeRead: (ids: string[], read: boolean) =>
+    request("PUT", "/api/notices/read", noticeReadSetSchema, { ids, read }),
   connection: (id: string) =>
     demoOn() && isDemoId(id)
       ? refuseInDemo<z.infer<typeof connectionDetailSchema>>(demoConnectRefusal)

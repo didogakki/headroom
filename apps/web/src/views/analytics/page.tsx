@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 
 import { convert } from "@headroom/view-model/wallet-money";
 import { demoHistory } from "@headroom/view-model/history-demo";
@@ -12,13 +12,18 @@ import { useNow } from "../../lib/now.ts";
 import { useSettings } from "../../lib/settings.tsx";
 import { useWallet } from "../../lib/wallet-store.ts";
 import { ErrorNotice } from "../../ui/error-notice.tsx";
+import { Tabs } from "../../ui/tabs.tsx";
 import type { ViewProps } from "../props.ts";
-import { PlanFitCard } from "./fit.tsx";
+import { AccountFilter } from "./common.tsx";
+import { fitLine, PlanFitCard } from "./fit.tsx";
+import { Head, TabFace } from "./head.tsx";
 import { buildAnalytics } from "./model.ts";
-import { RightNowCard } from "./now.tsx";
-import { RhythmCard } from "./rhythm.tsx";
-import { buildSeries } from "./series.ts";
+import { nowLine, RightNowCard } from "./now.tsx";
+import { reportKeys, reports, reportStore, type Report } from "./reports.ts";
+import { RhythmCard, summary } from "./rhythm.tsx";
+import { buildSeries, narrowSeries } from "./series.ts";
 import { AnalyticsSkeleton } from "./skeleton.tsx";
+import { useStoredView } from "./stored-view.ts";
 import { useHistory } from "./use-history.ts";
 import "./analytics.css";
 import "./common.css";
@@ -37,9 +42,11 @@ const noAccountsText = {
 };
 
 /**
- * Analytics: three questions, one card each. Rhythm: when limits are used and where they ran out. Right
- * now: what runs out before its reset. Plan fit: the changes worth making. Each card switches between views of
- * the same answer. Percentages from different accounts are never added, and a missing reading is a gap, not zero.
+ * Analytics: three questions, one report each, shown one at a time. Rhythm: when limits are used and where they
+ * ran out. Forecast: what runs out before its reset. Plan fit: the changes worth making. The header holds what
+ * every report shares, and each tab states its report's answer, so all three read without opening one. Each
+ * report switches between views of the same answer. Percentages from different accounts are never added, and a
+ * missing reading is a gap, not zero.
  */
 export function AnalyticsPage(props: ViewProps) {
   const { connections, failed, stale, reload } = props.overview;
@@ -102,30 +109,48 @@ function monthlyUsd(
 
 const wholeDays = (days: number): string => `${Math.floor(days)}天`;
 
-/** One quiet line when history is thin or the server keeps less than the longest range. */
-function historyNote(coverageDays: number | null, retentionDays: number): string | null {
-  const thin = coverageDays !== null && coverageDays < 30;
-  const short = retentionDays < 90;
-  if (!thin && !short) return null;
-  const parts: string[] = [];
-  if (thin) {
-    parts.push(
-      coverageDays < 1
-        ? "目前不足1天的历史记录。"
-        : `目前已有${wholeDays(coverageDays)}的历史记录。`,
-    );
-  }
-  if (short) parts.push(`历史记录保留${retentionDays}天。`);
-  if (thin && coverageDays < retentionDays) {
-    parts.push("Headroom 持续读取你的额度后，图表会逐渐丰富。");
-  }
-  return parts.join("");
+/** The header's status line: how much history there is and how many accounts it covers. */
+function statusLine(coverageDays: number | null, accounts: number): string {
+  const covered =
+    coverageDays === null
+      ? null
+      : `${coverageDays < 1 ? "不足1天" : wholeDays(coverageDays)}历史记录`;
+  const counted = `${accounts}个账户`;
+  return covered === null ? counted : `${covered} · ${counted}`;
+}
+
+/** One quiet line when the server keeps less than the longest range. */
+function historyNote(retentionDays: number): string | null {
+  return retentionDays < 90 ? `历史记录保留${retentionDays}天。` : null;
 }
 
 const clock = (at: number): string =>
   new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-const emptyCards = ["节律", "此刻", "套餐适配"] as const;
+type Answer = { readonly big: ReactNode; readonly cap: ReactNode };
+
+/** The report tabs: each names its report and time span and states the report's answer. */
+function ReportTabs(props: {
+  readonly open: Report;
+  readonly answers: Readonly<Record<Report, Answer>>;
+  readonly onOpen: (report: Report) => void;
+}) {
+  const tabs = reports.map((entry) => ({
+    value: entry.value,
+    label: <TabFace {...entry} {...props.answers[entry.value]} />,
+  }));
+  return (
+    <Tabs
+      label="报告"
+      tabs={tabs}
+      value={props.open}
+      onChange={props.onOpen}
+      panelId="an-report"
+      className="an-tabs"
+      tabClassName="an-tab"
+    />
+  );
+}
 
 function AnalyticsBoard(props: { readonly connections: Connections }) {
   const { connections } = props;
@@ -177,6 +202,21 @@ function AnalyticsBoard(props: { readonly connections: Connections }) {
     () => (analytics === null ? null : buildSeries(analytics, now)),
     [analytics, now],
   );
+  // One account filter for every report, in the page header. Null is every account.
+  const [focus, setFocus] = useState<string | null>(null);
+  const [open, setOpen] = useStoredView<Report>(reportStore, reportKeys, "rhythm");
+  // A picked account that left the list (removed, or Demo Mode turned on) falls back to every account.
+  const inView = series?.accounts.find((account) => account.id === focus) ?? null;
+  const focused = useMemo(
+    () => (series === null ? null : narrowSeries(series, inView?.id ?? null)),
+    [series, inView],
+  );
+  // Each tab states its report's answer for the accounts in view: Rhythm's busiest hours, the Forecast and the
+  // Plan fit History. Worked out once per rebuild, not on each clock tick.
+  const answers = useMemo((): Readonly<Record<Report, Answer>> | null => {
+    if (series === null || focused === null) return null;
+    return { rhythm: summary(series, inView), now: nowLine(focused), fit: fitLine(focused) };
+  }, [series, focused, inView]);
   if (state.kind === "failed") {
     return (
       <ErrorNotice
@@ -192,37 +232,62 @@ function AnalyticsBoard(props: { readonly connections: Connections }) {
       </ErrorNotice>
     );
   }
-  if (analytics === null || series === null || !wallet.loaded) return <AnalyticsSkeleton />;
+  if (
+    analytics === null ||
+    series === null ||
+    focused === null ||
+    answers === null ||
+    !wallet.loaded
+  ) {
+    return <AnalyticsSkeleton />;
+  }
   const note = [
-    historyNote(analytics.history.coverageDays, analytics.history.retentionDays),
+    historyNote(analytics.history.retentionDays),
     state.kind === "ready" && state.refreshFailedAfter !== null
       ? `当前显示的是 ${clock(state.refreshFailedAfter)} 的历史记录，刷新失败。`
       : null,
     wallet.loadFailed ? "价格未能加载，因此费用与节省金额未知。" : null,
   ]
     .filter((line): line is string => line !== null)
-    .join("");
+    .join(" ");
+  const status = statusLine(analytics.history.coverageDays, analytics.accounts.length);
   if (analytics.history.empty || analytics.accounts.length === 0) {
     return (
       <>
-        {emptyCards.map((title) => (
-          <section className="an2-card" aria-label={title} key={title}>
-            <p className="an-empty">
-              {analytics.history.empty
-                ? "暂无历史记录。Headroom 每隔几分钟读取一次你的额度，请一天后再来查看。"
-                : "暂无可绘制的额度。分析页绘制的是用量额度，而你的账户只报告金额。"}
-            </p>
-          </section>
-        ))}
+        <Head status={status} />
+        <section className="an2-card" aria-label="分析">
+          <p className="an-empty">
+            {analytics.history.empty
+              ? "暂无历史记录。Headroom 每隔几分钟读取一次你的额度，请一天后再来查看。"
+              : "暂无可绘制的额度。分析页绘制的是用量额度，而你的账户只报告金额。"}
+          </p>
+        </section>
       </>
     );
   }
   return (
     <>
+      <Head status={status}>
+        <AccountFilter accounts={series.accounts} value={inView?.id ?? null} onChange={setFocus} />
+      </Head>
       {note === "" ? null : <p className="an-note">{note}</p>}
-      <Rhythm series={series} />
-      <RightNow series={series} />
-      <PlanFit series={series} />
+      <ReportTabs open={open} answers={answers} onOpen={setOpen} />
+      {/* Hidden, not unmounted: a view, range or pick made in one report survives a visit to another. */}
+      <div
+        id="an-report"
+        role="tabpanel"
+        aria-label={reports.find((entry) => entry.value === open)?.label}
+      >
+        <div hidden={open !== "rhythm"}>
+          <Rhythm series={series} focused={focused} account={inView} />
+        </div>
+        <div hidden={open !== "now"}>
+          <RightNow series={focused} />
+        </div>
+        <div hidden={open !== "fit"}>
+          <PlanFit series={focused} />
+        </div>
+      </div>
     </>
   );
 }

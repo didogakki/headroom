@@ -11,10 +11,15 @@ This repository contains the working application and its specification and resea
 - Require a separate connection identity and credential boundary for every linked account. A folder path alone is not tenant isolation.
 - Treat an unavailable metric as unknown, not zero. Keep monetary balances, credits, percentages and reset inventories in separate units.
 - Preserve evidence labels: documented, source-inspected, prior observation, validated, and unvalidated. Label every metric `official` or `private`. A successful login does not prove quota access.
-- Monitoring must not generate model requests, redeem resets or purchase credits. A mutating account action needs an explicit owner action: a confirmed press in the dashboard, or a rule the owner configured ([ADR 0003](docs/decisions/0003-owner-automations.md)). Agents never enable a rule or run a mutation with real credentials.
+- Monitoring must not generate model requests, redeem resets or purchase credits. A mutating account action needs an explicit owner action: a confirmed press in the dashboard, or a rule the owner configured ([ADR 0003](docs/decisions/0003-owner-automations.md)). Every rule still needs "Allow Account Actions". Agents never enable a rule or run a mutation with real credentials.
 - Zed is outside the current scope. A laptop helper is not part of the connection design. Headroom is personal self-hosted software and must not be designed as a hosted multi-user service.
 - Run `mise run check` before claiming any change is done; it covers docs, format, type-aware lint, typecheck, Knip and tests. Use `mise run <task>` or `mise exec -- <command>`, never a global Bun. Update the docs index when adding a document.
 - Enumerations live in `packages/core/src/enums.ts`. Add a state there and in the data model together, never in only one place.
+- Before changing the Mac app API (`packages/view-model/src/app-feed.ts`, `apps/server/src/routes/app.ts`, `scripts/app-contract.ts`), Mac code that reads a server, or a supported version, follow [the app API compatibility skill](.agents/skills/app-api-compatibility/SKILL.md).
 - Start every commit subject with a Conventional Commit type (`feat:`, `fix:`, `docs:` and so on). Release-please sets the version from it; see [Releases](docs/operations/releases.md).
 - Pin every dependency to an exact version. Fix a lint or type error at its cause; do not add a disable directive without a one-line reason.
+- Before opening or updating a pull request that changes web or Mac views or server, connector, package or HeadroomKit behaviour, follow [the PR showcase skill](.agents/skills/pr-showcase/SKILL.md).
+- Before changing, adding or reviewing a provider connector, follow [the provider connector skill](.agents/skills/provider-connector/SKILL.md).
+- After changing `apps/web/src`, see the change on screen with [the verify web skill](.agents/skills/verify-web/SKILL.md).
+- Before calling a pull request green or ready, or when its CI fails, stalls or falls behind main, follow [the PR CI skill](.agents/skills/pr-ci/SKILL.md).
 - Do not add copied global skills or speculative infrastructure. Record material implementation choices in `docs/decisions/`.

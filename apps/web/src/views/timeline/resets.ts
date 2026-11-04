@@ -50,6 +50,19 @@ function early(at: number, due: number): string {
   return `提前${zhCountdown(due, at)}`;
 }
 
+const autoResetWhat = {
+  limit: {
+    succeeded: "Headroom 自动重置",
+    failed: "自动重置失败",
+    uncertain: "自动重置未确认",
+  },
+  expiry: {
+    succeeded: "Headroom 在到期前使用重置",
+    failed: "到期前使用失败",
+    uncertain: "到期前使用未确认",
+  },
+} as const;
+
 function rowsOf(connection: OverviewConnection, words: ResetWords): ResetRow[] {
   const meters = meterWindows(connection);
   const limitOf = (key: string | null): string => {
@@ -73,19 +86,16 @@ function rowsOf(connection: OverviewConnection, words: ResetWords): ResetRow[] {
         change: `${word} ${pct(shown(detail.previousPercent, words.view))} → ${pct(shown(detail.percent, words.view))}`,
       });
     } else if (detail.kind === "auto_reset") {
-      const what = {
-        succeeded: "Headroom 自动重置",
-        failed: "自动重置失败",
-        uncertain: "自动重置未确认",
-      }[detail.state];
+      const what = autoResetWhat[detail.trigger ?? "limit"][detail.state];
       rows.push({
         ...base,
         mark: detail.state === "succeeded" ? "auto" : "bad",
         limit: limitOf(event.metricKey),
         onLimit: true,
         what,
-        detail: early(event.occurredAt, detail.resetsAt),
-        change: `${word} ${pct(shown(detail.percent, words.view))} 时`,
+        detail: detail.resetsAt === null ? null : early(event.occurredAt, detail.resetsAt),
+        change:
+          detail.percent === null ? null : `${word} ${pct(shown(detail.percent, words.view))} 时`,
       });
     } else if (detail.kind === "reset_granted") {
       const claude = connection.provider === "claude";

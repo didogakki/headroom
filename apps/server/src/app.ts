@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
@@ -14,6 +14,11 @@ import {
 import type { AppContext } from "./bootstrap.ts";
 import { version } from "./version.ts";
 import { type Env, rejectCrossSite, requireSession } from "./middleware/session.ts";
+import { requireApiToken } from "./middleware/api-token.ts";
+import { appRoutes } from "./routes/app.ts";
+import { appPairRoutes } from "./routes/app-pair.ts";
+import { pairingRoutes } from "./routes/pairings.ts";
+import { tokenRoutes } from "./routes/tokens.ts";
 import { attemptRoutes } from "./routes/attempts.ts";
 import { connectionRoutes } from "./routes/connections.ts";
 import { deliveryRoutes } from "./routes/delivery.ts";
@@ -22,9 +27,15 @@ import { orderRoutes } from "./routes/order.ts";
 import { historyRoutes } from "./routes/history.ts";
 import { overviewRoutes } from "./routes/overview.ts";
 import { providerRoutes } from "./routes/providers.ts";
+import { noticeRoutes } from "./routes/notices.ts";
 import { settingsRoutes } from "./routes/settings.ts";
 import { walletRoutes } from "./routes/wallet.ts";
-import { resolveWebAssets, webUnavailableMessage } from "./web-assets.ts";
+import {
+  isRootImage,
+  isPublicIcon,
+  resolveWebAssets,
+  webUnavailableMessage,
+} from "./web-assets.ts";
 
 export { version };
 
@@ -34,6 +45,12 @@ export function createApp(ctx: AppContext): Hono {
   app.onError((error, c) => {
     ctx.log("error", `${c.req.method} ${c.req.path}: ${error.name}`);
     return c.json({ error: "internal_error" }, 500);
+  });
+
+  // Registered before secureHeaders so it runs after it: icons may be shown by other origins.
+  app.use(async (c, next) => {
+    await next();
+    if (isPublicIcon(c.req.path)) c.res.headers.set("cross-origin-resource-policy", "cross-origin");
   });
 
   app.use(
@@ -62,6 +79,13 @@ export function createApp(ctx: AppContext): Hono {
   app.get("/healthz", (c) => c.json({ status: "ok", version }));
 
   const api = new Hono<Env>();
+  const addressOf = (c: Context<Env>): string =>
+    clientAddress(c.req.raw, ctx.config.trustProxy, () => socketAddress(c));
+  // Registered first: the app has no token until a pairing is approved (D48).
+  api.route("/app/v1/pair", appPairRoutes(ctx, addressOf));
+  api.use("/app/v1/*", requireApiToken(ctx, addressOf));
+  api.route("/app/v1", appRoutes(ctx));
+
   api.use(
     cors({
       origin: (origin) => (ctx.trustedOrigins.includes(origin) ? origin : null),
@@ -74,13 +98,15 @@ export function createApp(ctx: AppContext): Hono {
 
   api.use(rejectCrossSite(ctx));
 
+  // Token management is exposed only through the scoped Headroom routes below.
+  api.use("/auth/api-key/*", requireSession(ctx));
+  api.all("/auth/api-key/*", (c) => c.json({ error: "not_found" }, 404));
+
   /** Better Auth owns everything under /api/auth, including its own origin checks and rate limits. */
   api.on(["GET", "POST"], "/auth/*", async (c) => {
     const headers = new Headers(c.req.raw.headers);
-    headers.set(
-      clientIpHeader,
-      clientAddress(c.req.raw, ctx.config.trustProxy, () => socketAddress(c)),
-    );
+    headers.delete("authorization");
+    headers.set(clientIpHeader, addressOf(c));
     const response = await ctx.auth.handler(new Request(c.req.raw, { headers }));
     return ownerRaceLost(c.req.path, response, ctx) ? ownerClosed() : response;
   });
@@ -95,6 +121,8 @@ export function createApp(ctx: AppContext): Hono {
     return c.json({ id: user.id, name: user.name, email: user.email });
   });
 
+  api.route("/tokens", tokenRoutes(ctx));
+  api.route("/pairings", pairingRoutes(ctx));
   api.route("/providers", providerRoutes(ctx));
   api.route("/connections", connectionRoutes(ctx));
   api.route("/attempts", attemptRoutes(ctx));
@@ -102,6 +130,7 @@ export function createApp(ctx: AppContext): Hono {
   api.route("/history", historyRoutes(ctx));
   api.route("/order", orderRoutes(ctx));
   api.route("/settings", settingsRoutes(ctx));
+  api.route("/notices", noticeRoutes(ctx));
   api.route("/delivery", deliveryRoutes(ctx));
   api.route("/exchange-rates", exchangeRateRoutes(ctx));
   api.route("/wallet", walletRoutes(ctx));
@@ -111,7 +140,11 @@ export function createApp(ctx: AppContext): Hono {
   // Built web UI, when present: static assets, then index.html for client-side routes.
   const web = resolveWebAssets(ctx.config.webDir);
   if (web) {
-    app.get("*", (c) => web.file(c.req.path) ?? web.index());
+    app.get("*", (c) => {
+      const file = web.file(c.req.path);
+      if (file) return file;
+      return isRootImage(c.req.path) ? c.text("Not found", 404) : web.index();
+    });
   } else {
     ctx.log("warn", webUnavailableMessage(ctx.config.webDir));
   }

@@ -124,8 +124,11 @@ export const accountActionKinds = ["consume_reset_credit"] as const;
 export const accountActionKindSchema = z.enum(accountActionKinds);
 export type AccountActionKind = z.infer<typeof accountActionKindSchema>;
 
-/** Who started an account action: the owner from the dashboard, or an owner-configured automation rule (ADR 0003). */
-export const accountActionOrigins = ["owner", "automation"] as const;
+/**
+ * Who started an account action: the owner from the dashboard, the auto-reset rule for a spent
+ * limit (`automation`), or its use-before-expiry trigger (`expiry`) (ADR 0003).
+ */
+export const accountActionOrigins = ["owner", "automation", "expiry"] as const;
 export const accountActionOriginSchema = z.enum(accountActionOrigins);
 export type AccountActionOrigin = z.infer<typeof accountActionOriginSchema>;
 
@@ -307,3 +310,20 @@ export type TopUpSource = z.infer<typeof topUpSourceSchema>;
 export const disconnectResults = ["revoked", "local_only", "failed"] as const;
 export const disconnectResultSchema = z.enum(disconnectResults);
 export type DisconnectResult = z.infer<typeof disconnectResultSchema>;
+
+/**
+ * App API token scopes. Every token can `read`. `refresh` is opt-in at creation and lets a device
+ * change only the Refresh Every setting (ADR 0004, D44).
+ */
+export const apiTokenScopes = ["read", "refresh"] as const;
+export const apiTokenScopeSchema = z.enum(apiTokenScopes);
+export type ApiTokenScope = z.infer<typeof apiTokenScopeSchema>;
+
+/**
+ * Where a device pairing stands (D48). The app polls with its device code: `pending` until the
+ * owner answers, `approved` once with the new token, `denied` or `expired` when it ends without one.
+ * Pairings live in server memory for ten minutes and are never stored.
+ */
+export const appPairingStatuses = ["pending", "approved", "denied", "expired"] as const;
+export const appPairingStatusSchema = z.enum(appPairingStatuses);
+export type AppPairingStatus = z.infer<typeof appPairingStatusSchema>;

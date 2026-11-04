@@ -1,6 +1,7 @@
 import { useContext, useRef, useState } from "react";
 
 import {
+  autoResetExpiryMinutes,
   autoResetMinHoursLeft,
   autoResetThresholds,
   defaultAutoResetRule,
@@ -83,6 +84,9 @@ const hoursOptions: readonly SelectOption<`${AutoResetRule["minHoursLeft"]}`>[] 
     label: `${value}小时`,
   }));
 
+const expiryOptions: readonly SelectOption<`${AutoResetRule["beforeExpiryMinutes"]}`>[] =
+  autoResetExpiryMinutes.map((value) => ({ value: `${value}`, label: `到期前${value}分钟` }));
+
 /**
  * One account's rule: a switch, and the three choices that say when it fires. The choices can be set before the
  * rule is switched on, so it never fires with settings the owner has not seen. A change shows at once and is saved
@@ -156,6 +160,28 @@ function AutoResetRow(props: {
           }}
         />
       </div>
+      <div className="srow auto-expiry" data-on={rule.beforeExpiry ? "" : undefined}>
+        <span className="sbody">
+          <b>到期前使用</b>
+          <span className="muted">使用即将到期且尚未使用的已存重置。</span>
+        </span>
+        <Select
+          label={`${name}的到期前使用提前时间`}
+          hideLabel
+          size="sm"
+          value={`${rule.beforeExpiryMinutes}` as const}
+          options={expiryOptions}
+          onChange={(value) => {
+            const beforeExpiryMinutes = autoResetExpiryMinutes.find((item) => `${item}` === value);
+            if (beforeExpiryMinutes !== undefined) save({ beforeExpiryMinutes });
+          }}
+        />
+        <Switch
+          checked={rule.beforeExpiry}
+          label={`${name}的到期前使用`}
+          onChange={(beforeExpiry) => save({ beforeExpiry })}
+        />
+      </div>
       {error === null ? null : (
         <p className="form-error" role="alert">
           {error}
@@ -175,7 +201,7 @@ function AutoResetSection(props: {
   return (
     <Section title="自动重置">
       <p className="auto-note muted">
-        使用最先到期的重置，每个窗口一次。尚未验证，首次尝试可能失败。
+        使用最先到期的重置，每个窗口一次。开启“到期前使用”后会重试直至重置到期。尚未验证，首次尝试可能失败。
       </p>
       {waiting || settings.accountActions ? null : (
         <output className="auto-hint">

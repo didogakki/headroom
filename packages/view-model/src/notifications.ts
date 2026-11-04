@@ -9,7 +9,7 @@ import {
 
 import type { Metric, OverviewConnection } from "./overview.ts";
 import { meterWindows, type MeterWindow } from "./accounts.ts";
-import { spendLabel } from "./automation.ts";
+import { spendLabel, spendPairs } from "./automation.ts";
 import { accountName, providerName, refreshFailed } from "./labels.ts";
 import { formatNumber, formatUsd } from "./present.ts";
 import { resolveWhen, shortDate } from "./time.ts";
@@ -18,8 +18,9 @@ import { almostOutBelow, toneOf } from "./tone.ts";
 
 /**
  * Notifications are derived from the latest overview and the owner's settings. Nothing is stored
- * on the server. Only which ones the owner has read is kept, in this browser. Each one is a
- * `NotificationEvent`, the same shape the server will later deliver (docs/architecture/notifications.md).
+ * for them. Only which ones the owner has read is kept, on the server, so every browser and the Mac
+ * app agree. Each one is a `NotificationEvent`, the same shape the server delivers
+ * (docs/architecture/notifications.md).
  */
 
 export type AppNotification = NotificationEvent;
@@ -53,6 +54,7 @@ export type NotificationSettings = {
   readonly lowThresholdPercent: 30 | 20 | 15;
   readonly timeStyle: "countdown" | "exact";
   readonly clock: "24h" | "12h";
+  readonly tzOffsetMinutes?: number;
   readonly notifications: NotificationPreferences;
 };
 
@@ -88,10 +90,14 @@ interface RunOut {
 }
 
 /**
- * When a weekly limit runs out at its recent burn rate, if that is at least a day before it resets.
+ * When a weekly limit runs out at its recent burn rate, if that is before it resets.
  * Null when the pace is unknown or stale, or the limit would last until the reset.
  */
-function runOutOf(connection: OverviewConnection, window: MeterWindow, now: number): RunOut | null {
+export function projectedRunOut(
+  connection: OverviewConnection,
+  window: MeterWindow,
+  now: number,
+): number | null {
   const snapshot = connection.snapshot;
   const used = window.used;
   if (snapshot === null || used === null || window.resetsAt === null) return null;
@@ -99,7 +105,14 @@ function runOutOf(connection: OverviewConnection, window: MeterWindow, now: numb
   if (now - snapshot.observedAt > paceFreshness) return null;
   const pace = connection.pace.find((item) => item.metricKey === window.key);
   if (pace === undefined || Math.abs(pace.to - snapshot.observedAt) > paceReadingGap) return null;
-  const runsOutAt = snapshot.observedAt + ((100 - used) / pace.ratePerHour) * hour;
+  const runsOutAt = Math.round(snapshot.observedAt + ((100 - used) / pace.ratePerHour) * hour);
+  return runsOutAt < window.resetsAt ? runsOutAt : null;
+}
+
+/** A projected run-out that is at least a day before the reset: the pacing notice's lead. */
+function runOutOf(connection: OverviewConnection, window: MeterWindow, now: number): RunOut | null {
+  const runsOutAt = projectedRunOut(connection, window, now);
+  if (runsOutAt === null || window.resetsAt === null) return null;
   const earlyBy = window.resetsAt - runsOutAt;
   return earlyBy >= day ? { runsOutAt, earlyBy } : null;
 }
@@ -294,8 +307,8 @@ function expiryNotifications(
   const days = Math.ceil((first.expiresAt - now) / day);
   const verb =
     soon.length === 1
-      ? `expires ${shortDate(first.expiresAt)}`
-      : `expire from ${shortDate(first.expiresAt)}`;
+      ? `expires ${shortDate(first.expiresAt, settings.tzOffsetMinutes)}`
+      : `expire from ${shortDate(first.expiresAt, settings.tzOffsetMinutes)}`;
   return [
     {
       ...base(connection, snapshot.observedAt),
@@ -313,14 +326,13 @@ function expiryNotifications(
 
 // ---------- balances and spend ----------
 
-function metricOf(connection: OverviewConnection, key: string): Metric | null {
+export function metricOf(connection: OverviewConnection, key: string): Metric | null {
   return connection.snapshot?.metrics.find((metric) => metric.providerMetricKey === key) ?? null;
 }
 
 /** A reported number. Unavailable, unlimited and unknown values are null, never zero. */
-function numberOf(metric: Metric | null): number | null {
-  if (metric === null || metric.availability !== "available" || metric.unlimited === true)
-    return null;
+export function numberOf(metric: Metric | null | undefined): number | null {
+  if (!metric || metric.availability !== "available" || metric.unlimited === true) return null;
   return metric.valueNum;
 }
 
@@ -403,7 +415,7 @@ function usageCreditsExpiring(
       subject: { metricKey: key, label, window: null },
       figures: { expiresAt: expires, amount: { value: amount, unit: "USD" } },
       title: `${providerName(connection.provider)} ${label} Expire in ${days} ${days === 1 ? "Day" : "Days"}`,
-      message: `${formatUsd(amount)} of ${label.toLowerCase()} expire ${shortDate(expires)}.`,
+      message: `${formatUsd(amount)} of ${label.toLowerCase()} expire ${shortDate(expires, settings.tzOffsetMinutes)}.`,
     });
   }
   return found;
@@ -475,39 +487,6 @@ function balanceNotifications(
     },
   ];
 }
-
-interface SpendPair {
-  readonly used: string;
-  readonly cap: string;
-  readonly label: string;
-  readonly unit: NotificationAmountUnit;
-  /** The cap must describe the same scope as the spend. */
-  readonly sameScope: boolean;
-}
-
-const spendPairs: Partial<Record<Provider, SpendPair>> = {
-  claude: {
-    used: "extra_usage.used",
-    cap: "extra_usage.monthly_limit",
-    label: "Extra Usage",
-    unit: "USD",
-    sameScope: false,
-  },
-  cursor: {
-    used: "on_demand.used",
-    cap: "on_demand.limit",
-    label: "On-Demand Spend",
-    unit: "USD",
-    sameScope: true,
-  },
-  grok: {
-    used: "on_demand.used",
-    cap: "on_demand_cap",
-    label: "On-Demand Use",
-    unit: "grok_credits",
-    sameScope: false,
-  },
-};
 
 function amountText(value: number, unit: NotificationAmountUnit): string {
   return unit === "USD" ? formatUsd(value) : formatNumber(value, Number.isInteger(value) ? 0 : 2);
@@ -717,8 +696,9 @@ function expiringCreditNotifications(
   connection: OverviewConnection,
   topUps: readonly ExpiringTopUp[],
   now: number,
+  tzOffsetMinutes = 0,
 ): AppNotification[] {
-  const today = Date.parse(`${isoDate(now)}T00:00:00Z`);
+  const today = Date.parse(`${isoDate(now + tzOffsetMinutes * 60_000)}T00:00:00Z`);
   const found: AppNotification[] = [];
   for (const topUp of topUps) {
     if (topUp.connectionId !== connection.id) continue;
@@ -789,6 +769,41 @@ function percentText(value: number): string {
   return `${Math.round(value)}%`;
 }
 
+function autoResetMessage(detail: Extract<AccountEvent["detail"], { kind: "auto_reset" }>): string {
+  if (detail.trigger === "expiry") {
+    if (detail.state === "succeeded")
+      return "A banked reset was about to expire unused, so Headroom used it.";
+    return detail.state === "failed"
+      ? "A banked reset was about to expire unused, but using it did not go through. Headroom retries until it expires."
+      : "A banked reset was about to expire unused, but Headroom could not confirm it was used. Headroom checks again and retries until it expires.";
+  }
+  const reached =
+    detail.percent === null
+      ? "A limit ran out"
+      : `A limit reached ${percentText(detail.percent)} used`;
+  if (detail.state === "succeeded") return `${reached}, so Headroom used a banked reset.`;
+  return detail.state === "failed"
+    ? `${reached}, but the reset did not go through. Headroom will not retry until the limit resets.`
+    : `${reached}, but Headroom could not confirm the reset. Check the account before you use another.`;
+}
+
+/**
+ * Use before expiry retries one credit several times inside its lead time. Only the first attempt
+ * with each outcome for a credit becomes a notice, so one failing credit warns once, and its id
+ * stays the same as later attempts arrive.
+ */
+function firstExpiryAttempts(events: readonly AccountEvent[]): Set<string> {
+  const first = new Map<string, AccountEvent>();
+  for (const event of events) {
+    const { detail } = event;
+    if (detail.kind !== "auto_reset" || detail.trigger !== "expiry") continue;
+    const key = `${detail.creditId}:${detail.state}`;
+    const seen = first.get(key);
+    if (!seen || event.occurredAt < seen.occurredAt) first.set(key, event);
+  }
+  return new Set([...first.values()].map((event) => event.id));
+}
+
 function eventNotifications(
   connection: OverviewConnection,
   settings: NotificationSettings,
@@ -799,10 +814,12 @@ function eventNotifications(
   const on = settings.notifications;
   const name = providerName(connection.provider);
   const found: AppNotification[] = [];
+  const retries = firstExpiryAttempts(connection.events);
   for (const event of connection.events) {
     if (now - event.occurredAt > eventLifetime) continue;
     const detail = event.detail;
     if (detail.kind === "auto_reset") {
+      if (detail.trigger === "expiry" && !retries.has(event.id)) continue;
       // A failed or uncertain attempt matters even for a muted provider or an account that stopped updating.
       const succeeded = detail.state === "succeeded";
       if (succeeded && (muted || !live)) continue;
@@ -810,17 +827,16 @@ function eventNotifications(
         ...eventBase(connection, event, "auto_reset"),
         tone: succeeded ? "info" : "warn",
         subject: { metricKey: event.metricKey, label: "Auto-Reset", window: null },
-        figures: { percentUsed: detail.percent },
+        figures: {
+          ...(detail.percent === null ? {} : { percentUsed: detail.percent }),
+          ...(detail.creditExpiresAt === undefined ? {} : { expiresAt: detail.creditExpiresAt }),
+        },
         title: succeeded
           ? `${name} Auto-Reset Used a Banked Reset`
           : detail.state === "failed"
             ? `${name} Auto-Reset Failed`
             : `${name} Auto-Reset May Not Have Worked`,
-        message: succeeded
-          ? `A limit reached ${percentText(detail.percent)} used, so Headroom used a banked reset.`
-          : detail.state === "failed"
-            ? `A limit reached ${percentText(detail.percent)} used, but the reset did not go through. Headroom will not retry until the limit resets.`
-            : `A limit reached ${percentText(detail.percent)} used, but Headroom could not confirm the reset. Check the account before you use another.`,
+        message: autoResetMessage(detail),
       });
       continue;
     }
@@ -833,7 +849,7 @@ function eventNotifications(
       const expires =
         detail.expiresAt === null
           ? "The new one has no expiry date."
-          : `The new one expires ${shortDate(detail.expiresAt)}.`;
+          : `The new one expires ${shortDate(detail.expiresAt, settings.tzOffsetMinutes)}.`;
       found.push({
         ...eventBase(connection, event, "reset_granted"),
         tone: "info",
@@ -944,7 +960,7 @@ export function deriveNotifications(
       );
     }
     if (!muted) {
-      found.push(...expiringCreditNotifications(connection, topUps, now));
+      found.push(...expiringCreditNotifications(connection, topUps, now, settings.tzOffsetMinutes));
       found.push(...usageCreditsExpiring(connection, settings, now));
     }
     found.push(...eventNotifications(connection, settings, now, muted, live));
@@ -973,6 +989,7 @@ export function currentIds(
 
 // ---------- read state ----------
 
+/** Where this browser kept its read ids before the server did. Read once to move them, then cleared. */
 export const readKey = "headroom.notifications.read";
 
 export function loadRead(storage: { getItem(key: string): string | null }): Set<string> {
@@ -984,11 +1001,8 @@ export function loadRead(storage: { getItem(key: string): string | null }): Set<
   }
 }
 
-export function saveRead(
-  storage: { setItem(key: string, value: string): void },
-  read: ReadonlySet<string>,
-): void {
-  storage.setItem(readKey, JSON.stringify([...read].toSorted()));
+export function clearRead(storage: { removeItem(key: string): void }): void {
+  storage.removeItem(readKey);
 }
 
 export function markRead(read: ReadonlySet<string>, id: string): Set<string> {

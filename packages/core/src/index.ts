@@ -29,6 +29,7 @@ export {
 } from "./http.ts";
 export { decodeJwt, expiryOf, parseDate } from "./connector-util.ts";
 export { splitLabel, type SplitLabel } from "./label.ts";
+export { NoticeReadStore, noticeReadRetentionMs } from "./notice-reads.ts";
 export {
   OrderStore,
   InvalidOrderError,
@@ -37,6 +38,11 @@ export {
   type OrderBody,
 } from "./order.ts";
 export { SettingsStore, defaultSettings, settingsSchema, type Settings } from "./settings.ts";
+export {
+  historyRetentionOptions,
+  refreshIntervalMinutesSchema,
+  refreshIntervalOptions,
+} from "./settings-schema.ts";
 export {
   WalletStore,
   UnknownConnectionError,
@@ -160,3 +166,5 @@ export {
   type LastDelivery,
 } from "./notifications/deliveries.ts";
 export { cliAvailability } from "./cli-availability.ts";
+
+export { ApiTokenStore, apiTokenScopesOf } from "./api-tokens.ts";

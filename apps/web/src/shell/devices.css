@@ -1,0 +1,103 @@
+/* Devices: a name field with its create button, the one-time key in a one-line field, and a row per token. */
+.device-form,
+.device-key {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding-block: 10px;
+}
+.device-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.device-create input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--foreground);
+  font: 400 var(--text-base) / 1.4 var(--font);
+}
+.device-create input:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+/* The key reads as a field: one line, cut with an ellipsis, with its copy button inside the trailing edge. */
+.key-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding-inline: 16px 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: var(--surface);
+}
+.key-field code {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 var(--text-sm) / 1 var(--mono);
+  color: var(--foreground);
+  user-select: all;
+}
+/* The access choice sits quietly at the trailing edge of the Device Name heading. */
+.device-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.device-head .seg {
+  flex: none;
+}
+.device-head .seg button {
+  white-space: nowrap;
+}
+.device-row .sbody {
+  max-width: none;
+}
+.device-row .sbody code {
+  font: 400 var(--text-xs) / 1 var(--mono);
+}
+.device-actions {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+.device-head > .sbody,
+.device-key > .sbody {
+  display: grid;
+  gap: 2px;
+}
+.device-head > .sbody b,
+.device-key > .sbody b {
+  font-weight: 500;
+  font-size: var(--text-base);
+}
+.device-head > .sbody .muted,
+.device-key > .sbody .muted {
+  font-size: var(--text-xs);
+  line-height: 1.35;
+}
+/* Phones: the choice drops under the heading at full width. */
+@media (max-width: 560px) {
+  .device-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .device-head .seg {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
