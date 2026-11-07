@@ -24,7 +24,7 @@ struct SettingsView: View {
         Spacer()
       }
       // The window content runs under the title bar; the list starts below the traffic lights.
-      .padding(.horizontal, 10).padding(.top, 48).frame(width: 165)
+      .padding(.horizontal, 10).padding(.top, SettingsWindowChrome.barHeight).frame(width: 165)
       .background(HR.background)
       .overlay(alignment: .trailing) { Rectangle().fill(HR.borderSubtle).frame(width: 1) }
       ScrollView {
@@ -1150,14 +1150,17 @@ extension View {
 
 /// Runs the Settings content under a transparent title bar and sets the close, minimize and zoom
 /// buttons in from the corner. Without help macOS puts them tight in the rounded corner; an empty
-/// toolbar moved them, but on macOS 26 it also frosted the pane under it on hover.
+/// toolbar moved them, but on macOS 26 it also frosted the pane under it on hover. The title
+/// bar's own background frosts it on hover too, so it stays hidden.
 private struct SettingsWindowChrome: NSViewRepresentable {
+  /// The title bar height, where the close button's row ends and the content begins.
+  static let barHeight: CGFloat = 48
+
   func makeNSView(context: Context) -> NSView { ChromeView() }
   func updateNSView(_ view: NSView, context: Context) {}
 
   private final class ChromeView: NSView {
-    /// The title bar height and the leading edge of the close button.
-    static let barHeight: CGFloat = 48
+    /// The leading edge of the close button.
     static let leading: CGFloat = 18
     private var observers: [NSObjectProtocol] = []
     private var placing = false
@@ -1199,16 +1202,21 @@ private struct SettingsWindowChrome: NSViewRepresentable {
       placing = true
       defer { placing = false }
       var frame = container.frame
-      frame.size.height = Self.barHeight
-      frame.origin.y = window.frame.height - Self.barHeight
+      frame.size.height = SettingsWindowChrome.barHeight
+      frame.origin.y = window.frame.height - SettingsWindowChrome.barHeight
       if container.frame != frame { container.frame = frame }
+      // Its scroll pocket blurs the pane title and draws a lighter band with a hard edge when the
+      // pointer enters the bar. Over this window's own surfaces it adds nothing.
+      for view in container.subviews where view.className == "NSTitlebarBackgroundView" {
+        view.isHidden = true
+      }
       let buttons = WindowButtons.all(of: window)
       // Keep macOS's own spacing between the three buttons.
       let step = buttons.count > 1 ? buttons[1].frame.minX - buttons[0].frame.minX : 20
       for (index, button) in buttons.enumerated() {
         let origin = NSPoint(
           x: Self.leading + CGFloat(index) * step,
-          y: ((Self.barHeight - button.frame.height) / 2).rounded())
+          y: ((SettingsWindowChrome.barHeight - button.frame.height) / 2).rounded())
         if button.frame.origin != origin { button.setFrameOrigin(origin) }
       }
     }

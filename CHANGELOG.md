@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.17](https://github.com/amitray007/headroom/compare/v0.1.16...v0.1.17) (2026-11-06)
+
+
+### Bug Fixes
+
+* lead the Mac app with Claude's all-models weekly, as the dashboard does ([b9e9de5](https://github.com/amitray007/headroom/commit/b9e9de5d19d71f605897c4f09fc6f0bfeff8d13e))
+* mark Claude model weeklies as parts of the all-models weekly ([1538545](https://github.com/amitray007/headroom/commit/153854596b83de6ca5bf77d3f9a255129b7b4053))
+
+## [0.1.16](https://github.com/amitray007/headroom/compare/v0.1.15...v0.1.16) (2026-11-04)
+
+
+### Bug Fixes
+
+* pipe paginated releases to jq in the Mac release script ([5b7fe6c](https://github.com/amitray007/headroom/commit/5b7fe6cc01a9bdde6911b01d2ea124d796d92aab))
+* unblock the Mac release by piping paginated releases to jq ([a8b1798](https://github.com/amitray007/headroom/commit/a8b1798380a0bb3f4799d7a72e30805a8e535b86))
+
 ## [0.1.15](https://github.com/amitray007/headroom/compare/v0.1.14...v0.1.15) (2026-11-03)
 
 
